@@ -7,3 +7,13 @@ socket.addEventListener('open', function (event) {
 socket.addEventListener('message', function (event) {
     console.log(`Message from the server: ${event.data}`);
 })
+
+const sendMessage = () => {
+    socket.send('Hello Server');
+}
+
+const main = document.getElementById('worm');
+const button = document.createElement('button');
+button.onclick = sendMessage;
+button.innerText = 'Send Message'
+main.appendChild(button)
