@@ -4,10 +4,13 @@
 async function init() {
     await postData('/login', {}).then(data => {
         console.log(data);
-        document.cookie = `uid=${data.userID}`;
+        document.cookie = `uid=${data.userCode}`;
+        const userCodeElement = document.createElement('h3');
+        userCodeElement.innerText = data.userCode;
+        main.appendChild(userCodeElement);
     });
 
-    const socket = new WebSocket('ws://localhost:8082');
+    const socket = await new WebSocket('ws://localhost:8082');
 
     socket.addEventListener('open', function (event) {
         console.log('Connection open.');
@@ -21,7 +24,6 @@ async function init() {
 }
 
 const socket = init();
-
 
 
 const sendMessage = async () => {
