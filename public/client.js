@@ -1,14 +1,28 @@
 //David Silady
 //Client communication
-const socket = new WebSocket('ws://localhost:8082');
 
-socket.addEventListener('open', function (event) {
-    console.log('Connection open.');
-})
+async function init() {
+    await postData('/login', {}).then(data => {
+        console.log(data);
+        document.cookie = `uid=${data.userID}`;
+    });
 
-socket.addEventListener('message', function (event) {
-    console.log(`Message from the server: ${event.data}`);
-})
+    const socket = new WebSocket('ws://localhost:8082');
+
+    socket.addEventListener('open', function (event) {
+        console.log('Connection open.');
+    });
+
+    socket.addEventListener('message', function (event) {
+        console.log(`Message from the server: ${event.data}`);
+    });
+
+    return socket;
+}
+
+const socket = init();
+
+
 
 const sendMessage = async () => {
     postData('/', {message: 'hi server'}).then(data => {
