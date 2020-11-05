@@ -80,5 +80,5 @@ function debug(output) {
     }
 }
 
-app.listen(HTTP_PORT)
-server.listen(WS_PORT, () => console.log(`Listening on port: ${WS_PORT}`));
+app.listen(HTTP_PORT, () => console.log(`Listening for HTTP connection on port: ${HTTP_PORT}`))
+server.listen(WS_PORT, () => console.log(`Listening for WS connection on port: ${WS_PORT}`));

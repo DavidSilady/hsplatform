@@ -48,11 +48,11 @@ function postKey(e) {
 
 
 //HOUSENKA CLIENT
-
+let IMG_LOADED = 0;
 const xsize = 41;
-const ysize = 31;
+const ysize = 18;
 
-const TILE_SIZE = 48;
+const TILE_SIZE = 16;
 const DEBUG = true;
 
 localStorage.setItem("DEBUG", "true");
@@ -60,7 +60,9 @@ localStorage.setItem("DEBUG", "true");
 let CONTEXT = {};
 let IMAGES = {};
 let coordinateHash = generateCoordinateHash();
-housenkaInit();
+housenkaInit().then(r => {
+    console.log('Canvas Ready')
+});
 
 function coords (x,y) {
     return y*xsize + x;
@@ -77,33 +79,50 @@ function generateCoordinateHash() {
     return coordinateArray;
 }
 
+async function loadImg(src) {
+    let img;
+    const promise =  new Promise(resolve => {
+        img = new Image();
+        img.onload = function () {
+            resolve();
+        }
+        img.src = src;
+    });
+    await promise;
+    return img;
+}
+
+//https://stackoverflow.com/a/56341485
 //const obsahy = ['prazdne', 'telicko', 'zradlo', 'zed', 'klic', 'dvere', 'hlavicka'];
-function loadImages() {
+async function loadImages() {
     if (DEBUG) console.log("Loading Images");
+
+    // TODO: Make all promises parallel
+    //If not - i forgot
 
     //Free for commercial use - No atribution required
     //https://pixabay.com/service/license/
-    const borderImg = document.write('<img id="borderImg" src="https://cdn.pixabay.com/photo/2013/07/12/13/17/brick-wall-146753_960_720.png" style="display: none" alt="borderImg">');
-
+    const borderImg = await loadImg(
+        "https://cdn.pixabay.com/photo/2013/07/12/13/17/brick-wall-146753_960_720.png");
     //CC0 Public Domain
     //Free for commercial use.
     //No attribution required.
     //https://pixy.org/licence.php
-    const bodyImg = document.write('<img id="bodyImg" src="https://pixy.org/src/5/50318.png" style="display: none" alt="borderImg">');
+    const bodyImg = await loadImg("https://pixy.org/src/5/50318.png");
 
     //Source: https://iconscout.com/icon/donut-doughnut-sweet-dessert-food-fastfood-emoj-symbol
     //You must give attribution to the Designer. You can copy, redistribute, remix, the work for commercial purposes as well.
     //Creative Commons 4 Attribution
-    const foodImg = document.write('<img id="foodImg" src="https://cdn.iconscout.com/icon/free/png-64/donut-doughnut-sweet-dessert-food-fastfood-emoj-symbol-30698.png" style="display: none" alt="borderImg">');
+    const foodImg = await loadImg("https://cdn.iconscout.com/icon/free/png-64/donut-doughnut-sweet-dessert-food-fastfood-emoj-symbol-30698.png");
 
     // Description	Linecons by Designmodo
     // Source	http://www.flaticon.com/packs/linecons
     // Author	Designmodo http://www.designmodo.com/s
-    const keyImg = document.write('<img id="keyImg" src="https://upload.wikimedia.org/wikipedia/commons/9/99/Linecons_small-key.svg" style="display: none" alt="borderImg">');
+    const keyImg = await loadImg("https://upload.wikimedia.org/wikipedia/commons/9/99/Linecons_small-key.svg");
 
     // Source: https://creazilla.com/nodes/44854-door-emoji-clipart
     // Licence: CC 4.0
-    const doorImg = document.write('<img id="doorImg" src="https://creazilla-store.fra1.digitaloceanspaces.com/emojis/44854/door-emoji-clipart-md.png" style="display: none" alt="borderImg">')
+    const doorImg = await loadImg("https://creazilla-store.fra1.digitaloceanspaces.com/emojis/44854/door-emoji-clipart-md.png");
 
     // Source: https://commons.wikimedia.org/wiki/File:Eo_circle_pink_letter-o.svg
     // Description
@@ -112,8 +131,7 @@ function loadImages() {
     // Source	Derived from Emoji One BW icons
     // Author	Emoji One contributors
     // Licence CC 4.0
-    const headImg = document.write('<img id="headImg" src="https://upload.wikimedia.org/wikipedia/commons/d/d9/Eo_circle_red_white_letter-o.svg" style="display: none" alt="borderImg">')
-
+    const headImg = await loadImg("https://upload.wikimedia.org/wikipedia/commons/d/d9/Eo_circle_red_white_letter-o.svg");
     return {
         borderImg: borderImg,
         bodyImg: headImg,
@@ -126,17 +144,27 @@ function loadImages() {
 
 function drawBorders () {
 
-    if(DEBUG) console.log("Building horizontal borders at:");
+    if(DEBUG) console.log("Building horizontal borders");
     //draw border
     for(let x = 0; x < xsize; x++) {
-        if (DEBUG) console.log(x);
         CONTEXT.drawImage(IMAGES.borderImg, x * TILE_SIZE, 0, TILE_SIZE, TILE_SIZE);
         CONTEXT.drawImage(IMAGES.borderImg, x * TILE_SIZE, TILE_SIZE * (ysize - 1), TILE_SIZE, TILE_SIZE);
     }
-    if(DEBUG) console.log("Building vertical borders at:");
+    if(DEBUG) console.log("Building vertical borders");
     for(let y = 0; y < ysize; y++) {
-        if (DEBUG) console.log(y);
         CONTEXT.drawImage(IMAGES.borderImg, 0, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
         CONTEXT.drawImage(IMAGES.borderImg, (xsize - 1) * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
+}
+
+async function housenkaInit () {
+    //deleteOriginalTable();
+    if (DEBUG) console.log("Building Canvas");
+    document.write('<style>canvas {border: solid 3px red}</style>')
+    document.write('<canvas id="myCanvas" width="' + (xsize * TILE_SIZE) + '" height="' + (ysize * TILE_SIZE) + '"> </canvas>');
+    if (DEBUG) console.log("Canvas Built");
+    const canvas = document.getElementById("myCanvas");
+    CONTEXT = canvas.getContext("2d");
+    IMAGES = await loadImages();
+    drawBorders();
 }

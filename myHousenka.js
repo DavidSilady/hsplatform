@@ -12,14 +12,14 @@ function deleteOriginalTable() {
 
 function housenkaInit () {
     //deleteOriginalTable();
-    if (DEBUG) console.log("Building Canvas");
+   /* if (DEBUG) console.log("Building Canvas");
     document.write('<style>canvas {border: solid 3px red}</style>')
     document.write('<canvas id="myCanvas" width="'+(xsize * TILE_SIZE)+'" height="'+(ysize * TILE_SIZE)+'"> </canvas>');
     if (DEBUG) console.log("Canvas Built");
     const canvas = document.getElementById("myCanvas");
     CONTEXT = canvas.getContext("2d");
     IMAGES = loadImages();
-    drawBorders();
+    drawBorders();*/
     novaHra();
     window.onload = function () { startHry(); }
     document.defaultAction = false;
