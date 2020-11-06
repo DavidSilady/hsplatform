@@ -17,7 +17,14 @@ async function init() {
     });
 
     socket.addEventListener('message', function (event) {
-        console.log(`Message from the server: ${event.data}`);
+        const jsonData = JSON.parse(event.data);
+        if (jsonData.board) {
+            updateBoard(jsonData.board);
+        } else if (jsonData.msg) {
+            console.log(jsonData.msg);
+        } else {
+            debug(jsonData);
+        }
     });
 
     return socket;
@@ -25,6 +32,9 @@ async function init() {
 
 const socket = init();
 
+function debug(output) {
+    if (DEBUG) console.log(output);
+}
 
 const sendMessage = async () => {
     postData('/', {message: 'hi server'}).then(data => {
@@ -58,7 +68,7 @@ main.appendChild(button)
 
 document.onkeydown = postKey;
 function postKey(e) {
-    postData('/', {keyDown: e.code}).then(res => {
+    postData('/key', {keyDown: e.code}).then(res => {
         console.log(res)});
 }
 
@@ -66,7 +76,7 @@ function postKey(e) {
 //HOUSENKA CLIENT
 let IMG_LOADED = 0;
 const xsize = 41;
-const ysize = 18;
+const ysize = 31;
 
 const TILE_SIZE = 16;
 const DEBUG = true;
@@ -75,25 +85,9 @@ localStorage.setItem("DEBUG", "true");
 
 let CONTEXT = {};
 let IMAGES = {};
-let coordinateHash = generateCoordinateHash();
 housenkaInit().then(r => {
     console.log('Canvas Ready')
 });
-
-function coords (x,y) {
-    return y*xsize + x;
-}
-
-function generateCoordinateHash() {
-    let coordinateArray = [];
-    for (let x = 0; x < xsize; x++) {
-        for (let y = 0; y < ysize; y++) {
-            let index = coords(x, y); //using the build in encoding
-            coordinateArray[index] = {x: x, y: y};
-        }
-    }
-    return coordinateArray;
-}
 
 async function loadImg(src) {
     let img;
@@ -183,4 +177,37 @@ async function housenkaInit () {
     CONTEXT = canvas.getContext("2d");
     IMAGES = await loadImages();
     drawBorders();
+}
+
+function reverse_coords (position) {
+    const x = position % xsize;
+    const y = Math.floor(position / xsize);
+
+    return {x: x, y: y};
+}
+
+function updateBoard (board) {
+    for (let index = 0; index < board.length; index++) {
+        canvasInput(reverse_coords(index), board[index]);
+    }
+}
+
+function canvasInput (coordinates, color) {
+    //const obsahy = ['prazdne', 'telicko', 'zradlo', 'zed', 'klic', 'dvere', 'hlavicka'];
+    if (color === 0) {
+        CONTEXT.clearRect(coordinates.x * TILE_SIZE, coordinates.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        //CONTEXT.drawImage(IMAGES.borderImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
+    } else if (color === 1) {
+        CONTEXT.drawImage(IMAGES.bodyImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
+    } else if (color === 2) {
+        CONTEXT.drawImage(IMAGES.foodImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
+    } else if (color === 3) {
+        CONTEXT.drawImage(IMAGES.borderImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
+    } else if (color === 4) {
+        CONTEXT.drawImage(IMAGES.keyImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
+    } else if (color === 5) {
+        CONTEXT.drawImage(IMAGES.doorImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
+    } else if (color === 6) {
+        CONTEXT.drawImage(IMAGES.headImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
+    }
 }

@@ -2,6 +2,7 @@
 const express = require('express');
 const session = require('express-session');
 const uuid = require('uuid');
+const sh = require('./serverHousenka');
 
 //Const values
 const WS_PORT = 8082;
@@ -13,6 +14,7 @@ const MAX_USERS = 10000; //codes 0000 to 9999
 //Global variables
 const socketToUserCode = new Map();
 const userCodeToSocket = new Map();
+const activeGames = new Map();
 const activeCodes = new Set();
 
 //Helper functions
@@ -25,16 +27,18 @@ function getCookie(cookies, name) {
 function heartbeat() {
     this.isAlive = true;
 }
-function generateUserCode() {
-    let stringID = '0000';
-    while (activeCodes.has(stringID)) {
+function generateUserCode(originalCode) {
+    if (! originalCode) {
+        originalCode = '0000';
+    }
+    while (activeCodes.has(originalCode)) {
         let number = Math.floor(Math.random() * MAX_USERS);
-        stringID = number.toLocaleString(
+        originalCode = number.toLocaleString(
             'en-US',
             {minimumIntegerDigits: 4, useGrouping:false});
     }
-    activeCodes.add(stringID);
-    return stringID;
+    activeCodes.add(originalCode);
+    return originalCode;
 }
 
 //Server setup
@@ -59,21 +63,26 @@ wss.on('connection', function connection(socket, req) {
     const userID = getCookie(req.headers.cookie, 'uid');
     socketToUserCode.set(socket, userID); //for 2-way search
     userCodeToSocket.set(userID, socket);
+    if (! activeGames.has(userID)) {
+        const game = new sh.ServerGame(userID);
+        activeGames.set(userID, game);
+    }
 
     socket.isAlive = true;
     socket.on('pong', heartbeat); // updating isAlive for keepAlive
 
-    socket.send('WS Connection Established!');
+    socket.send(JSON.stringify({msg: 'WS Connection Established!'}));
 
     socket.on('message', function incoming(message) {
         console.log(`Received ${message}`);
-        socket.send(`Message ${message} received from user ${userID}`);
+        socket.send(JSON.stringify({msg: `Message ${message} received from user ${userID}`}));
     });
 
     socket.on('close', function () {
         const code = socketToUserCode.get(socket)
         debug(`Socket closed: ${socketToUserCode.get(socket)}`);
         activeCodes.delete(code);
+        activeGames.delete(code);
         userCodeToSocket.delete(code);
         socketToUserCode.delete(socket);
     });
@@ -84,10 +93,14 @@ wss.on('connection', function connection(socket, req) {
 let index = 0;
 const gameUpdate = setInterval(function update() {
     wss.clients.forEach(socket => {
-        socket.send(`Update ${index} for ${socketToUserCode.get(socket)}`);
+        const userID = socketToUserCode.get(socket);
+        const game = activeGames.get(userID)
+        if (game) {
+            socket.send(JSON.stringify({board: game.gameState.plocha}));
+        }
     });
     index += 1;
-}, 3000);
+}, 30);
 
 //interval (keepalive) for detecting disconnects
 //https://github.com/websockets/ws#how-to-detect-and-close-broken-connections
@@ -117,13 +130,27 @@ app.post('/login', function (req, res) {
     //
     // "Log in" user and set private userId and public userCode to session.
     //
-    const id = uuid.v4();
-    const code = generateUserCode();
-    req.session.userID = id; //private
-    req.session.userCode = code //public in cookie and on site /0000 - 9999
+    if (! req.session.userID) {
+        req.session.userID = uuid.v4(); //private
+        // will keep original code if its still free
+        req.session.userCode = generateUserCode(req.session.userCode); //public in cookie and on site / 0000 - 9999
+    }
 
-    console.log(`Updating session for user ${id}`);
-    res.send({ result: 'OK', message: 'Session updated', userCode: code });
+    console.log(`Updating session for user ${req.session.userID}`);
+    res.send({ result: 'OK', message: 'Session updated', userCode: req.session.userCode, userID: req.session.userID});
+});
+
+app.post('/key', function (req, res) {
+    const userCode = req.session.userCode
+    if (userCode && req.body.keyDown) {
+        const game = activeGames.get(userCode);
+        if (game) {
+            game.onKeyPress(req.body.keyDown);
+        }
+        res.status(200).send(JSON.stringify({msg: `Key: ${req.body.keyDown} received.`}))
+    } else {
+        res.status(400).send(JSON.stringify({msg: 'Unknown user or missing key.'}));
+    }
 });
 
 app.post('/', postHandler);
