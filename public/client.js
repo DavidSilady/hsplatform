@@ -18,7 +18,7 @@ async function init() {
 
     socket.addEventListener('message', function (event) {
         const jsonData = JSON.parse(event.data);
-        if (jsonData.board) {
+        if (jsonData.board && canvasReady) {
             updateBoard(jsonData.board);
         } else if (jsonData.msg) {
             console.log(jsonData.msg);
@@ -80,13 +80,15 @@ const ysize = 31;
 
 const TILE_SIZE = 16;
 const DEBUG = true;
+let canvasReady = false;
 
 localStorage.setItem("DEBUG", "true");
 
 let CONTEXT = {};
 let IMAGES = {};
 housenkaInit().then(r => {
-    console.log('Canvas Ready')
+    console.log('Canvas Ready');
+    canvasReady = true;
 });
 
 async function loadImg(src) {

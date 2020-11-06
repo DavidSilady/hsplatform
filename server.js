@@ -100,7 +100,7 @@ const gameUpdate = setInterval(function update() {
         }
     });
     index += 1;
-}, 30);
+}, 15);
 
 //interval (keepalive) for detecting disconnects
 //https://github.com/websockets/ws#how-to-detect-and-close-broken-connections

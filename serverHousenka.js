@@ -34,9 +34,9 @@ class GameState {
         this.ysize = 31;
         this.rychlost = 250;
         this.zradlo_pocatek = 10;
-        this.zradlo_za_klic = 6;
-        this.klicu_v_levelu = 10;
-        this.cena_klice = 5;
+        this.zradlo_za_klic = 1;
+        this.klicu_v_levelu = 1;
+        this.cena_klice = 1;
         this.bodu_za_zradlo_orig = 1;
         this.bodu_za_klic = 10;
         this.bodu_za_level = 100;
@@ -173,9 +173,9 @@ class ServerGame {
     rozpohybujHousenku () {
         if (this.gameState.timer) this.zastavHousenku();
         const game = this;
-        this.gameState.timer = setTimeout(function movement() {
-            game.pohybHousenky(game);
-        }, this.gameState.rychlost);
+
+        //binding to pass this (class object) to the function
+        this.gameState.timer = setTimeout(this.movement.bind(this), this.gameState.rychlost);
     }
     volnePole (nesmi_byt) {
         const xsize = this.gameState.xsize;
@@ -214,13 +214,13 @@ class ServerGame {
 
         this.show_result(keyAppearMsg);
     }
-    pohybHousenky (parent) {
-        const xsize = parent.gameState.xsize;
-        const ysize = parent.gameState.ysize;
-        var smer_x = parent.gameState.smery[Number(parent.gameState.idx_smeru[parent.gameState.smer])];
-        var smer_y = parent.gameState.smery[Number(parent.gameState.idx_smeru[parent.gameState.smer])+1];
+    movement () {
+        const xsize = this.gameState.xsize;
+        const ysize = this.gameState.ysize;
+        var smer_x = this.gameState.smery[Number(this.gameState.idx_smeru[this.gameState.smer])];
+        var smer_y = this.gameState.smery[Number(this.gameState.idx_smeru[this.gameState.smer])+1];
 
-        var hlavicka = parent.reverse_coords(parent.gameState.telicko[0]);
+        var hlavicka = this.reverse_coords(this.gameState.telicko[0]);
 
         smer_x += hlavicka[0];
         smer_y += hlavicka[1];
@@ -231,43 +231,43 @@ class ServerGame {
         if (smer_y < 0) smer_y += ysize;
 
         var narust = 0;
-        var nova_pozice = parent.coords(smer_x,smer_y);
-        if (parent.gameState.plocha[nova_pozice] === 2) { // zradlo
-            parent.gameState.body += parent.gameState.bodu_za_zradlo;  ++parent.gameState.ulozeno_na_klice;
-            parent.show_body();
-            parent.vyresKlice(nova_pozice);
-            --parent.gameState.zradla_k_dispozici;  ++narust;
-            parent.nastavBarvu(nova_pozice,0);
-        } else if (parent.gameState.plocha[nova_pozice] == 4) { // klic
-            ++parent.gameState.klicu;
-            parent.show_klice();
-            parent.gameState.klic_na_scene = false;
-            parent.nastavBarvu(nova_pozice,0);
+        var nova_pozice = this.coords(smer_x,smer_y);
+        if (this.gameState.plocha[nova_pozice] === 2) { // zradlo
+            this.gameState.body += this.gameState.bodu_za_zradlo;  ++this.gameState.ulozeno_na_klice;
+            this.show_body();
+            this.vyresKlice(nova_pozice);
+            --this.gameState.zradla_k_dispozici;  ++narust;
+            this.nastavBarvu(nova_pozice,0);
+        } else if (this.gameState.plocha[nova_pozice] == 4) { // klic
+            ++this.gameState.klicu;
+            this.show_klice();
+            this.gameState.klic_na_scene = false;
+            this.nastavBarvu(nova_pozice,0);
 
-            parent.gameState.body += parent.gameState.bodu_za_klic;
-            parent.show_body();
+            this.gameState.body += this.gameState.bodu_za_klic;
+            this.show_body();
 
-            parent.show_result(keyGotMsg);
+            this.show_result(keyGotMsg);
 
             ++narust;
 
-            if (parent.gameState.klicu === parent.gameState.klicu_v_levelu)
-                parent.vygenerujDvere(nova_pozice);
-            else parent.vyresKlice(nova_pozice);
-        } else if (parent.gameState.plocha[nova_pozice] === 5) { // dvere
-            parent.dalsiLevel();
+            if (this.gameState.klicu === this.gameState.klicu_v_levelu)
+                this.vygenerujDvere(nova_pozice);
+            else this.vyresKlice(nova_pozice);
+        } else if (this.gameState.plocha[nova_pozice] === 5) { // dvere
+            this.dalsiLevel();
             return;
         }
 
-        if (parent.gameState.plocha[nova_pozice] == 0) {
-            parent.odbarviHlavu();
-            parent.narustHousenky(nova_pozice,true);
-            parent.gameState.povolena_zmena_smeru = 1;
-            if (!narust) parent.nastavBarvu(parent.gameState.telicko.pop(),0);
-            parent.rozpohybujHousenku();
+        if (this.gameState.plocha[nova_pozice] == 0) {
+            this.odbarviHlavu();
+            this.narustHousenky(nova_pozice,true);
+            this.gameState.povolena_zmena_smeru = 1;
+            if (!narust) this.nastavBarvu(this.gameState.telicko.pop(),0);
+            this.rozpohybujHousenku();
         } else
-        if (parent.gameState.plocha[nova_pozice] === 1) parent.koncime('worm');
-        else parent.koncime('wall');
+        if (this.gameState.plocha[nova_pozice] === 1) this.koncime('worm');
+        else this.koncime('wall');
     }
     vyresKlice (nesmi_byt) {
         if (this.gameState.klic_na_scene || this.gameState.dvere_na_scene) return;
@@ -396,8 +396,9 @@ class ServerGame {
             this.gameState.hlaska = accelMsg;
         }
 
-        const zed = this.zed;
-        const cihla = this.cihla;
+        //binding to pass this (class object)
+        const zed = this.zed.bind(this);
+        const cihla = this.cihla.bind(this);
 
         results[1] = Math.floor(xsize / 2);
         results[2] = Math.floor(ysize / 2);
