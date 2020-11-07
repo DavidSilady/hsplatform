@@ -1,6 +1,118 @@
 //David Silady
 //Client communication
 
+const userSignUp = async () => {
+    const username = signUpUsername.value;
+    const password = signUpPassword.value;
+    const mail = signUpMail.value;
+    if (! validateEmail(mail)) {
+        signUpResult.innerText = 'valid mail required';
+        return;
+    }
+    if (username === '' && validateUsername(username)) {// TODO proper validation
+        signUpResult.innerText = 'username required (can only contain letters [a-z, A-Z])';
+        return;
+    }
+    if (password === '') {
+        signUpResult.innerText = 'password required';
+        return;
+    }
+    postData('/signUp', {username: username, password: password, mail: mail}).then(data => {
+        debug(data);
+        if (data.msg) {
+            signUpResult.innerText = data.msg;
+        }
+        if (data.result) {
+            loggedIn = true;
+            debug('Logged In');
+        }
+    })
+}
+
+const userLogin = async () => {
+    const username = loginUsername.value;
+    const password = loginPassword.value;
+    postData('/login', {username: username, password: password}).then(data => {
+        debug(data);
+        if (data.msg) {
+            loginResult.innerText = data.msg;
+        }
+        if (data.result) {
+            loggedIn = true;
+            debug('Logged In');
+        }
+    })
+}
+
+const main = document.getElementById('worm');
+//Login / Sign Up
+
+    const signUpDiv = document.createElement('div');
+    const loginDiv = document.createElement('div');
+
+    const loginPassword = document.createElement("input"); //input element, text
+    loginPassword.setAttribute('type',"password");
+    loginPassword.setAttribute('placeholder',"password");
+    loginPassword.setAttribute('name',"password");
+
+    const loginUsername = document.createElement("input"); //input element, text
+    loginUsername.setAttribute('type',"text");
+    loginUsername.setAttribute('name',"username");
+    loginUsername.setAttribute('placeholder',"name");
+
+
+    const signUpUsername = document.createElement("input"); //input element, text
+    signUpUsername.setAttribute('type',"text");
+    signUpUsername.setAttribute('name',"username");
+    signUpUsername.setAttribute('placeholder',"name");
+
+    const signUpPassword = document.createElement("input"); //input element, text
+    signUpPassword.setAttribute('type',"password");
+    signUpPassword.setAttribute('placeholder',"password");
+    signUpPassword.setAttribute('name',"password");
+
+    const signUpMail = document.createElement("input"); //input element, text
+    signUpMail.setAttribute('type',"text");
+    signUpMail.setAttribute('name',"mail");
+    signUpMail.setAttribute('placeholder',"mail");
+
+    const signUpResult = document.createElement('p');
+    signUpResult.innerText = '';
+
+    const loginResult = document.createElement('p');
+    loginResult.innerText = '';
+
+
+
+// const submit = document.createElement("input"); //input element, Submit button
+// submit.setAttribute('type',"submit");
+// submit.setAttribute('value',"Log In");
+
+    const loginButton = document.createElement('button');
+    loginButton.onclick = userLogin;
+    loginButton.innerText = 'Log In';
+
+
+
+    const signUpButton = document.createElement('button');
+    signUpButton.onclick = userSignUp;
+    signUpButton.innerText = 'Sign Up';
+
+    loginDiv.appendChild(loginUsername);
+    loginDiv.appendChild(loginPassword);
+    loginDiv.appendChild(loginButton);
+    loginDiv.appendChild(loginResult);
+
+    signUpDiv.appendChild(signUpMail);
+    signUpDiv.appendChild(signUpUsername);
+    signUpDiv.appendChild(signUpPassword);
+    signUpDiv.appendChild(signUpButton);
+    signUpDiv.appendChild(signUpResult);
+
+    main.appendChild(signUpDiv);
+    main.appendChild(loginDiv);
+
+
 async function init() {
     await postData('/init', {}).then(data => {
         console.log(data);
@@ -42,33 +154,11 @@ function validateEmail(email) {
     return re.test(String(email).toLowerCase());
 }
 
-const userSignUp = async () => {
-    const username = usernameInput.value;
-    const password = passwordInput.value;
-    const mail = mailInput.value;
-    if (! validateEmail(mail)) {
-        signUpResult.innerText = 'valid mail required';
-        return;
-    }
-    if (username === '') {// TODO proper validation
-        signUpResult.innerText = 'username required';
-        return;
-    }
-    if (password === '') {
-        signUpResult.innerText = 'password required';
-        return;
-    }
-    postData('/signUp', {username: username, password: password, mail: mail}).then(data => {
-        debug(data);
-        if (data.msg) {
-            signUpResult.innerText = data.msg;
-        }
-        if (data.result) {
-            loggedIn = true;
-            debug('Logged In');
-        }
-    })
+function validateUsername(username) {
+    return /^[a-z]+$/i.test(username);
 }
+
+
 
 async function postData(url = '', data = {}) {
     //https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
@@ -88,7 +178,7 @@ async function postData(url = '', data = {}) {
     return response.json(); // parses JSON response into native JavaScript objects
 }
 
-const main = document.getElementById('worm');
+
 
 
 main.onkeydown = postKey;
@@ -255,47 +345,6 @@ startButton.onclick = () => {
 }
 startButton.innerText = '(Start | Stop) Key Input';
 main.appendChild(startButton);
-//Login Form
-/*
-const form = document.createElement("form");
-form.setAttribute('method',"post");
-form.setAttribute('action',"login");
-*/
-
-const formDiv = document.createElement('div');
 
 
-const usernameInput = document.createElement("input"); //input element, text
-usernameInput.setAttribute('type',"text");
-usernameInput.setAttribute('name',"username");
-usernameInput.setAttribute('placeholder',"name");
-usernameInput.setAttribute('pattern',"[A-Za-z]");
 
-const passwordInput = document.createElement("input"); //input element, text
-passwordInput.setAttribute('type',"password");
-passwordInput.setAttribute('placeholder',"password");
-passwordInput.setAttribute('name',"password");
-
-const mailInput = document.createElement("input"); //input element, text
-mailInput.setAttribute('type',"text");
-mailInput.setAttribute('name',"mail");
-mailInput.setAttribute('placeholder',"mail");
-
-const signUpResult = document.createElement('p');
-signUpResult.innerText = '';
-
-// const submit = document.createElement("input"); //input element, Submit button
-// submit.setAttribute('type',"submit");
-// submit.setAttribute('value',"Log In");
-
-const signUpButton = document.createElement('button');
-signUpButton.onclick = userSignUp;
-signUpButton.innerText = 'Sign Up';
-
-formDiv.appendChild(mailInput);
-formDiv.appendChild(usernameInput);
-formDiv.appendChild(passwordInput);
-formDiv.appendChild(signUpButton);
-formDiv.appendChild(signUpResult);
-
-main.appendChild(formDiv);

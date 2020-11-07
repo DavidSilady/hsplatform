@@ -49,14 +49,7 @@ function generateUserCode(originalCode) {
 const userStorage = [];
 const usernameSet = new Set();
 const mailSet = new Set();
-const csvWriter = createCsvWriter({
-    path: 'data.csv',
-    header: [
-        {id: 'mail', title: 'mail'},
-        {id: 'username', title: 'username'},
-        {id: 'password', title: 'password'}
-    ]
-});
+
 function loadStorage() {
     //https://stackabuse.com/reading-and-writing-csv-files-with-node-js/
     fs.createReadStream('data.csv')
@@ -74,8 +67,16 @@ function loadStorage() {
             console.log('CSV file successfully processed');
         });
 }
-function writeStorage(data) {
-    csvWriter.writeRecords(data).then(() => debug('CSV file updated.'));
+function writeStorage() {
+    const csvWriter = createCsvWriter({
+        path: 'data.csv',
+        header: [
+            {id: 'mail', title: 'mail'},
+            {id: 'username', title: 'username'},
+            {id: 'password', title: 'password'}
+        ]
+    });
+    csvWriter.writeRecords(userStorage).then(() => debug('CSV file updated.'));
 }
 function signUp(user) {
     let result = true;
@@ -92,7 +93,7 @@ function signUp(user) {
         userStorage.push(user);
         usernameSet.add(user.username);
         mailSet.add(user.mail);
-        writeStorage([user]);
+        writeStorage();
         outputMsg = 'User Signed Up';
     }
     return {msg: outputMsg, result: result};
@@ -105,7 +106,11 @@ function login(user) {
         storedUser = getUserByUsername(user.username);
     }
     if (storedUser) {
-        if (storedUser.password === user.password) {
+        const bytes  = CryptoJS.AES.decrypt(storedUser.password, '13bc672d8b40');
+        const originalText = bytes.toString(CryptoJS.enc.Utf8);
+        debug(originalText);
+        debug(user.password);
+        if (originalText === user.password) {
             return {result: true, msg: `User Logged In`};
         } else {
             return {result: false, msg: `Incorrect username or password`};
@@ -226,7 +231,7 @@ app.post('/init', function (req, res) {
     }
 
     console.log(`Updating session for user ${req.session.userID}`);
-    res.send({ result: 'OK', message: 'Session updated', userCode: req.session.userCode, userID: req.session.userID});
+    res.send(JSON.stringify({ result: 'OK', message: 'Session updated', userCode: req.session.userCode, userID: req.session.userID}));
 });
 app.post('/signUp', function (req, res) {
     if (req.body.password && req.body.username && req.body.mail) {
@@ -239,7 +244,21 @@ app.post('/signUp', function (req, res) {
         debug(user);
         const output = signUp(user);
         res.status(200).send(JSON.stringify(output));
+    } else {
+        res.status(400).send(JSON.stringify({msg: 'Something went wrong.', result: false}));
     }
+});
+app.post('/login', function (req, res) {
+   if (req.body.password && req.body.username) {
+       const user = {
+           username: req.body.username,
+           password: req.body.password
+       }
+       const output = login(user);
+       res.status(200).send(JSON.stringify(output));
+   } else {
+       res.status(400).send(JSON.stringify({msg: 'Something went wrong.', result: false}));
+   }
 });
 app.post('/gameInput', function (req, res) {
     const userCode = req.session.userCode
@@ -264,7 +283,7 @@ function postHandler (req, res, next) {
 function errorHandler(err, req, res, next) {
     if (err) {
         console.log(err)
-        res.status(400).send('<h2>There has been an error.</h2>')
+        res.status(400).send(JSON.stringify({msg: 'There has been an error.'}));
     }
 }
 
