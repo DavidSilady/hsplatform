@@ -3,6 +3,9 @@ const express = require('express');
 const session = require('express-session');
 const uuid = require('uuid');
 const sh = require('./serverHousenka');
+const CryptoJS = require('crypto-js');
+const csv = require('csv-parser');
+const fs = require('fs');
 
 //Const values
 const WS_PORT = 8082;
@@ -40,6 +43,26 @@ function generateUserCode(originalCode) {
     activeCodes.add(originalCode);
     return originalCode;
 }
+
+//User Storage
+const userStorage = [];
+const usernameSet = new Set();
+function loadStorage() {
+    //https://stackabuse.com/reading-and-writing-csv-files-with-node-js/
+    fs.createReadStream('data.csv')
+        .on('error', (err) => {
+            debug('Error reading data.csv');
+        })
+        .pipe(csv())
+        .on('data', (row) => {
+            console.log(row);
+        })
+        .on('end', () => {
+            console.log('CSV file successfully processed');
+        });
+}
+
+loadStorage();
 
 //Server setup
 const app = express();
@@ -90,7 +113,6 @@ wss.on('connection', function connection(socket, req) {
 
 // Intervals
 //interval for game updates
-let index = 0;
 const gameUpdate = setInterval(function update() {
     wss.clients.forEach(socket => {
         const userID = socketToUserCode.get(socket);
@@ -99,7 +121,6 @@ const gameUpdate = setInterval(function update() {
             socket.send(JSON.stringify({board: game.gameState.plocha}));
         }
     });
-    index += 1;
 }, 15);
 
 //interval (keepalive) for detecting disconnects
@@ -126,7 +147,7 @@ app.use(express.urlencoded({extended: true}));
 //Express Calls
 //app.use(initSessionUser);
 app.use(express.static('public'));
-app.post('/login', function (req, res) {
+app.post('/init', function (req, res) {
     //
     // "Log in" user and set private userId and public userCode to session.
     //
@@ -139,8 +160,22 @@ app.post('/login', function (req, res) {
     console.log(`Updating session for user ${req.session.userID}`);
     res.send({ result: 'OK', message: 'Session updated', userCode: req.session.userCode, userID: req.session.userID});
 });
-
-app.post('/key', function (req, res) {
+app.post('/signUp', function (req, res) {
+    if (req.body.password && req.body.username && req.body.mail) {
+        const cipherPassword = CryptoJS.AES.encrypt(req.body.password, '13bc672d8b40').toString();
+        const user = {
+            name: req.body.username,
+            mail: req.body.mail,
+            password: cipherPassword
+        }
+        debug(user);
+        res.status(200).send(JSON.stringify({
+            msg: `User ${req.body.username} logged in.`,
+            result: true
+        }));
+    }
+});
+app.post('/gameInput', function (req, res) {
     const userCode = req.session.userCode
     if (userCode && req.body.keyDown) {
         const game = activeGames.get(userCode);
@@ -149,7 +184,7 @@ app.post('/key', function (req, res) {
         }
         res.status(200).send(JSON.stringify({msg: `Key: ${req.body.keyDown} received.`}))
     } else {
-        res.status(400).send(JSON.stringify({msg: 'Unknown user or missing key.'}));
+        res.status(200).send(JSON.stringify({msg: 'Unknown user or missing key.'}));
     }
 });
 

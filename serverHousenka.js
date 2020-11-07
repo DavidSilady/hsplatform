@@ -2,6 +2,7 @@
 
 // Housenka (Nibbles Revival)
 // implementoval na Vanoce 2007 Milan Sorm
+// original implementation by Milan Sorm from https://is.stuba.sk/js/herna/housenka.js​​​​​​​
 {
     var papejMsg = '';
     var startGameMsg = '';
@@ -251,9 +252,7 @@ class ServerGame {
 
             ++narust;
 
-            if (this.gameState.klicu === this.gameState.klicu_v_levelu)
-                this.vygenerujDvere(nova_pozice);
-            else this.vyresKlice(nova_pozice);
+            if (this.gameState.klicu === this.gameState.klicu_v_levelu) this.vygenerujDvere(nova_pozice); else this.vyresKlice(nova_pozice);
         } else if (this.gameState.plocha[nova_pozice] === 5) { // dvere
             this.dalsiLevel();
             return;

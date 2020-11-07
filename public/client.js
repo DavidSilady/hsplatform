@@ -2,7 +2,7 @@
 //Client communication
 
 async function init() {
-    await postData('/login', {}).then(data => {
+    await postData('/init', {}).then(data => {
         console.log(data);
         document.cookie = `uid=${data.userCode}`;
         const userCodeElement = document.createElement('h3');
@@ -23,7 +23,7 @@ async function init() {
         } else if (jsonData.msg) {
             console.log(jsonData.msg);
         } else {
-            debug(jsonData);
+            //debug(jsonData);
         }
     });
 
@@ -36,9 +36,37 @@ function debug(output) {
     if (DEBUG) console.log(output);
 }
 
-const sendMessage = async () => {
-    postData('/', {message: 'hi server'}).then(data => {
-        console.log(data);
+function validateEmail(email) {
+    // https://stackoverflow.com/a/46181
+    const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    return re.test(String(email).toLowerCase());
+}
+
+const userSignUp = async () => {
+    const username = usernameInput.value;
+    const password = passwordInput.value;
+    const mail = mailInput.value;
+    if (! validateEmail(mail)) {
+        signUpResult.innerText = 'valid mail required';
+        return;
+    }
+    if (username === '') {
+        signUpResult.innerText = 'username required';
+        return;
+    }
+    if (password === '') {
+        signUpResult.innerText = 'password required';
+        return;
+    }
+    postData('/signUp', {username: username, password: password, mail: mail}).then(data => {
+        debug(data);
+        if (data.msg) {
+            signUpResult.innerText = data.msg;
+        }
+        if (data.result) {
+            loggedIn = true;
+            debug('Logged In');
+        }
     })
 }
 
@@ -61,17 +89,16 @@ async function postData(url = '', data = {}) {
 }
 
 const main = document.getElementById('worm');
-const button = document.createElement('button');
-button.onclick = sendMessage;
-button.innerText = 'Send Message'
-main.appendChild(button)
 
-document.onkeydown = postKey;
+
+main.onkeydown = postKey;
 function postKey(e) {
-    postData('/key', {keyDown: e.code}).then(res => {
-        console.log(res)});
+    if (keyInputEnabled) {
+        postData('/gameInput', {keyDown: e.code}).then(res => {
+            debug(res)
+        });
+    }
 }
-
 
 //HOUSENKA CLIENT
 let IMG_LOADED = 0;
@@ -173,9 +200,13 @@ async function housenkaInit () {
     //deleteOriginalTable();
     if (DEBUG) console.log("Building Canvas");
     document.write('<style>canvas {border: solid 3px red}</style>')
-    document.write('<canvas id="myCanvas" width="' + (xsize * TILE_SIZE) + '" height="' + (ysize * TILE_SIZE) + '"> </canvas>');
+    const canvas = document.createElement('canvas');
+    canvas.setAttribute('id', 'myCanvas');
+    canvas.width = xsize * TILE_SIZE;
+    canvas.height = ysize * TILE_SIZE;
+    main.appendChild(canvas);
     if (DEBUG) console.log("Canvas Built");
-    const canvas = document.getElementById("myCanvas");
+    // const canvas = document.getElementById("myCanvas");
     CONTEXT = canvas.getContext("2d");
     IMAGES = await loadImages();
     drawBorders();
@@ -213,3 +244,58 @@ function canvasInput (coordinates, color) {
         CONTEXT.drawImage(IMAGES.headImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
     }
 }
+
+// I N T E R F A C E
+let loggedIn = false;
+let keyInputEnabled = false;
+const startButton = document.createElement('button');
+startButton.onclick = () => {
+    keyInputEnabled = !keyInputEnabled;
+    debug(`Game Key Input Enabled: ${keyInputEnabled}`);
+}
+startButton.innerText = '(Start | Stop) Key Input';
+main.appendChild(startButton);
+//Login Form
+/*
+const form = document.createElement("form");
+form.setAttribute('method',"post");
+form.setAttribute('action',"login");
+*/
+
+const formDiv = document.createElement('div');
+
+
+const usernameInput = document.createElement("input"); //input element, text
+usernameInput.setAttribute('type',"text");
+usernameInput.setAttribute('name',"username");
+usernameInput.setAttribute('placeholder',"name");
+usernameInput.setAttribute('pattern',"[A-Za-z]");
+
+const passwordInput = document.createElement("input"); //input element, text
+passwordInput.setAttribute('type',"password");
+passwordInput.setAttribute('placeholder',"password");
+passwordInput.setAttribute('name',"password");
+
+const mailInput = document.createElement("input"); //input element, text
+mailInput.setAttribute('type',"text");
+mailInput.setAttribute('name',"mail");
+mailInput.setAttribute('placeholder',"mail");
+
+const signUpResult = document.createElement('p');
+signUpResult.innerText = '';
+
+// const submit = document.createElement("input"); //input element, Submit button
+// submit.setAttribute('type',"submit");
+// submit.setAttribute('value',"Log In");
+
+const signUpButton = document.createElement('button');
+signUpButton.onclick = userSignUp;
+signUpButton.innerText = 'Sign Up';
+
+formDiv.appendChild(mailInput);
+formDiv.appendChild(usernameInput);
+formDiv.appendChild(passwordInput);
+formDiv.appendChild(signUpButton);
+formDiv.appendChild(signUpResult);
+
+main.appendChild(formDiv);
