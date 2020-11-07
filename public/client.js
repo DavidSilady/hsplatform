@@ -50,7 +50,7 @@ const userSignUp = async () => {
         signUpResult.innerText = 'valid mail required';
         return;
     }
-    if (username === '') {
+    if (username === '') {// TODO proper validation
         signUpResult.innerText = 'username required';
         return;
     }

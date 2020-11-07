@@ -5,6 +5,7 @@ const uuid = require('uuid');
 const sh = require('./serverHousenka');
 const CryptoJS = require('crypto-js');
 const csv = require('csv-parser');
+const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const fs = require('fs');
 
 //Const values
@@ -47,6 +48,15 @@ function generateUserCode(originalCode) {
 //User Storage
 const userStorage = [];
 const usernameSet = new Set();
+const mailSet = new Set();
+const csvWriter = createCsvWriter({
+    path: 'data.csv',
+    header: [
+        {id: 'mail', title: 'mail'},
+        {id: 'username', title: 'username'},
+        {id: 'password', title: 'password'}
+    ]
+});
 function loadStorage() {
     //https://stackabuse.com/reading-and-writing-csv-files-with-node-js/
     fs.createReadStream('data.csv')
@@ -55,11 +65,70 @@ function loadStorage() {
         })
         .pipe(csv())
         .on('data', (row) => {
-            console.log(row);
+            userStorage.push(row);
+            usernameSet.add(row.username);
+            mailSet.add(row.mail);
         })
         .on('end', () => {
+
             console.log('CSV file successfully processed');
         });
+}
+function writeStorage(data) {
+    csvWriter.writeRecords(data).then(() => debug('CSV file updated.'));
+}
+function signUp(user) {
+    let result = true;
+    let outputMsg = '';
+    if (usernameSet.has(user.username)) {
+        result = false;
+        outputMsg += `Username ${user.username} already in use. `;
+    }
+    if (mailSet.has(user.mail)) {
+        result = false;
+        outputMsg += `Mail ${user.mail} already in use. `;
+    }
+    if (result) {
+        userStorage.push(user);
+        usernameSet.add(user.username);
+        mailSet.add(user.mail);
+        writeStorage([user]);
+        outputMsg = 'User Signed Up';
+    }
+    return {msg: outputMsg, result: result};
+}
+function login(user) {
+    let storedUser = {};
+    if (user.mail) {
+        storedUser = getUserByMail(user.mail);
+    } else if (user.username) {
+        storedUser = getUserByUsername(user.username);
+    }
+    if (storedUser) {
+        if (storedUser.password === user.password) {
+            return {result: true, msg: `User Logged In`};
+        } else {
+            return {result: false, msg: `Incorrect username or password`};
+        }
+    }
+}
+function getUserByMail(mail) {
+    for (let i = 0; i < userStorage.length; i++) {
+        if (userStorage[i].mail === mail) {
+            return userStorage[i];
+        }
+    }
+    //default
+    return NaN;
+}
+function getUserByUsername(username) {
+    for (let i = 0; i < userStorage.length; i++) {
+        if (userStorage[i].username === username) {
+            return userStorage[i];
+        }
+    }
+    //default
+    return NaN;
 }
 
 loadStorage();
@@ -90,7 +159,6 @@ wss.on('connection', function connection(socket, req) {
         const game = new sh.ServerGame(userID);
         activeGames.set(userID, game);
     }
-
     socket.isAlive = true;
     socket.on('pong', heartbeat); // updating isAlive for keepAlive
 
@@ -164,15 +232,13 @@ app.post('/signUp', function (req, res) {
     if (req.body.password && req.body.username && req.body.mail) {
         const cipherPassword = CryptoJS.AES.encrypt(req.body.password, '13bc672d8b40').toString();
         const user = {
-            name: req.body.username,
+            username: req.body.username,
             mail: req.body.mail,
             password: cipherPassword
         }
         debug(user);
-        res.status(200).send(JSON.stringify({
-            msg: `User ${req.body.username} logged in.`,
-            result: true
-        }));
+        const output = signUp(user);
+        res.status(200).send(JSON.stringify(output));
     }
 });
 app.post('/gameInput', function (req, res) {
