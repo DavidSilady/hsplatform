@@ -280,6 +280,15 @@ function deserialize(string) {
     return instance;
 }
 
+app.post('/activeGames', function (req, res) {
+    debug(Array.from(activeCodes));
+    const activeGames = Array.from(activeCodes);
+    const jsonActiveGames = activeGames.map(gameCode => {
+        return {"code": gameCode, "id": 1}
+    });
+    res.status(200).send(JSON.stringify({msg: 'Requested Games.', activeGames: jsonActiveGames}));
+});
+
 app.post('/getState', function (req, res) {
     if (req.session.userID) {
         const game = codeToActiveGame.get(userIDtoGameCode.get(req.session.userID));

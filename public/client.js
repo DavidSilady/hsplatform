@@ -475,3 +475,51 @@ function download(data, filename, type) {
         }, 0);
     }
 }
+
+function createTable(data) {
+    //https://www.valentinog.com/blog/html-table/
+    function generateTableHead(table, data) {
+        let thead = table.createTHead();
+        let row = thead.insertRow();
+        for (let key of data) {
+            let th = document.createElement("th");
+            debug(key)
+            let text = document.createTextNode('code');
+            th.appendChild(text);
+            row.appendChild(th);
+        }
+    }
+
+    function generateTable(table, data) {
+        for (let element of data) {
+            let row = table.insertRow();
+            for (let key in element) {
+                let cell = row.insertCell();
+                let text = document.createTextNode(element[key]);
+                cell.appendChild(text);
+            }
+        }
+    }
+
+    const table = document.createElement('table');
+    generateTable(table, data);
+    generateTableHead(table, data);
+    main.appendChild(table);
+}
+
+const activeGamesButton = document.createElement('button');
+activeGamesButton.onclick = function () {
+    postData('/activeGames', {msg: 'Request Active Games'}).then(data => {
+        debug(data);
+        if (data.msg) {
+            console.log(data.msg);
+        }
+        if (data.activeGames) {
+            const activeGamesArray = data.activeGames;
+            debug(activeGamesArray);
+            createTable(activeGamesArray);
+        }
+    });
+}
+activeGamesButton.innerText = 'Show Active Games';
+main.appendChild(activeGamesButton);
