@@ -1,4 +1,6 @@
 //David Silady
+//Sorry for the messy code - ran out of time...
+
 //Client communication
 
 const userSignUp = async () => {
@@ -119,6 +121,7 @@ const assignedGameCode = document.createElement('h3');
     main.appendChild(loginDiv);
 
     const gameStateHeader = document.createElement('h4');
+    const spectateStateHeader = document.createElement('h4');
     main.appendChild(gameStateHeader);
 
 async function init() {
@@ -138,13 +141,20 @@ async function init() {
 
     socket.addEventListener('message', function (event) {
         const jsonData = JSON.parse(event.data);
-        if (jsonData.board && canvasReady) {
-            updateBoard(jsonData.board);
-            gameStateHeader.innerText = `| Max Score: ${jsonData.maxScore} | `
-            gameStateHeader.innerText += ` Current Score: ${jsonData.currentScore} | `
-            gameStateHeader.innerText += ` Max Level: ${jsonData.maxLevel} | `
-            gameStateHeader.innerText += ` Current Level: ${jsonData.currentLevel} | `
-            gameStateHeader.innerText += ` Lives: ${jsonData.lives} | `
+        if (jsonData.main && canvasReady) {
+            updateBoard(jsonData.main.board, CONTEXT);
+            gameStateHeader.innerText = `| Max Score: ${jsonData.main.maxScore} | `
+            gameStateHeader.innerText += ` Current Score: ${jsonData.main.currentScore} | `
+            gameStateHeader.innerText += ` Max Level: ${jsonData.main.maxLevel} | `
+            gameStateHeader.innerText += ` Current Level: ${jsonData.main.currentLevel} | `
+            gameStateHeader.innerText += ` Lives: ${jsonData.main.lives} | `
+        } if (jsonData.spectate && spectateReady) {
+            updateBoard(jsonData.spectate.board, SPECTATE_CONTEXT);
+            spectateStateHeader.innerText = `| Max Score: ${jsonData.spectate.maxScore} | `
+            spectateStateHeader.innerText += ` Current Score: ${jsonData.spectate.currentScore} | `
+            spectateStateHeader.innerText += ` Max Level: ${jsonData.spectate.maxLevel} | `
+            spectateStateHeader.innerText += ` Current Level: ${jsonData.spectate.currentLevel} | `
+            spectateStateHeader.innerText += ` Lives: ${jsonData.spectate.lives} | `
         } else if (jsonData.msg) {
             console.log(jsonData.msg);
         } else {
@@ -215,7 +225,9 @@ let canvasReady = false;
 localStorage.setItem("DEBUG", "true");
 
 let CONTEXT = {};
+let SPECTATE_CONTEXT = {};
 let IMAGES = {};
+saveGameBlock();
 housenkaInit().then(r => {
     console.log('Canvas Ready');
     canvasReady = true;
@@ -284,25 +296,25 @@ async function loadImages() {
     };
 }
 
-function drawBorders () {
+function drawBorders (context) {
 
     if(DEBUG) console.log("Building horizontal borders");
     //draw border
     for(let x = 0; x < xsize; x++) {
-        CONTEXT.drawImage(IMAGES.borderImg, x * TILE_SIZE, 0, TILE_SIZE, TILE_SIZE);
-        CONTEXT.drawImage(IMAGES.borderImg, x * TILE_SIZE, TILE_SIZE * (ysize - 1), TILE_SIZE, TILE_SIZE);
+        context.drawImage(IMAGES.borderImg, x * TILE_SIZE, 0, TILE_SIZE, TILE_SIZE);
+        context.drawImage(IMAGES.borderImg, x * TILE_SIZE, TILE_SIZE * (ysize - 1), TILE_SIZE, TILE_SIZE);
     }
     if(DEBUG) console.log("Building vertical borders");
     for(let y = 0; y < ysize; y++) {
-        CONTEXT.drawImage(IMAGES.borderImg, 0, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-        CONTEXT.drawImage(IMAGES.borderImg, (xsize - 1) * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        context.drawImage(IMAGES.borderImg, 0, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        context.drawImage(IMAGES.borderImg, (xsize - 1) * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
 }
 
 async function housenkaInit () {
     //deleteOriginalTable();
     if (DEBUG) console.log("Building Canvas");
-    document.write('<style>canvas {border: solid 3px red}</style>')
+    document.write('<style>canvas {border: solid 3px #ff0000}</style>')
     const canvas = document.createElement('canvas');
     canvas.setAttribute('id', 'myCanvas');
     canvas.width = xsize * TILE_SIZE;
@@ -312,7 +324,7 @@ async function housenkaInit () {
     // const canvas = document.getElementById("myCanvas");
     CONTEXT = canvas.getContext("2d");
     IMAGES = await loadImages();
-    drawBorders();
+    drawBorders(CONTEXT);
 }
 
 function reverse_coords (position) {
@@ -322,29 +334,29 @@ function reverse_coords (position) {
     return {x: x, y: y};
 }
 
-function updateBoard (board) {
+function updateBoard (board, context) {
     for (let index = 0; index < board.length; index++) {
-        canvasInput(reverse_coords(index), board[index]);
+        canvasInput(reverse_coords(index), board[index], context);
     }
 }
 
-function canvasInput (coordinates, color) {
+function canvasInput (coordinates, color, context) {
     //const obsahy = ['prazdne', 'telicko', 'zradlo', 'zed', 'klic', 'dvere', 'hlavicka'];
     if (color === 0) {
-        CONTEXT.clearRect(coordinates.x * TILE_SIZE, coordinates.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        context.clearRect(coordinates.x * TILE_SIZE, coordinates.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
         //CONTEXT.drawImage(IMAGES.borderImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
     } else if (color === 1) {
-        CONTEXT.drawImage(IMAGES.bodyImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
+        context.drawImage(IMAGES.bodyImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
     } else if (color === 2) {
-        CONTEXT.drawImage(IMAGES.foodImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
+        context.drawImage(IMAGES.foodImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
     } else if (color === 3) {
-        CONTEXT.drawImage(IMAGES.borderImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
+        context.drawImage(IMAGES.borderImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
     } else if (color === 4) {
-        CONTEXT.drawImage(IMAGES.keyImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
+        context.drawImage(IMAGES.keyImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
     } else if (color === 5) {
-        CONTEXT.drawImage(IMAGES.doorImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
+        context.drawImage(IMAGES.doorImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
     } else if (color === 6) {
-        CONTEXT.drawImage(IMAGES.headImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
+        context.drawImage(IMAGES.headImg, TILE_SIZE * coordinates.x, TILE_SIZE * coordinates.y, TILE_SIZE, TILE_SIZE);
     }
 }
 
@@ -421,7 +433,7 @@ const remoteControl = function () {
 remoteControl();
 
 
-function fileInput() {
+function saveGameBlock() {
     const fileInputDiv = document.createElement('div');
     main.appendChild(fileInputDiv);
     const downloadStateButton = document.createElement('button');
@@ -454,7 +466,7 @@ function fileInput() {
     fileInputDiv.appendChild(inputElement);
 }
 
-fileInput();
+
 
 // Function to download data to a file
 function download(data, filename, type) {
@@ -476,7 +488,10 @@ function download(data, filename, type) {
     }
 }
 
-function createTable(data) {
+
+
+function createTable(table, data) {
+    clearElement(table);
     //https://www.valentinog.com/blog/html-table/
     function generateTableHead(table, data) {
         let thead = table.createTHead();
@@ -484,10 +499,11 @@ function createTable(data) {
         for (let key of data) {
             let th = document.createElement("th");
             debug(key)
-            let text = document.createTextNode('code');
+            let text = document.createTextNode(key);
             th.appendChild(text);
             row.appendChild(th);
         }
+
     }
 
     function generateTable(table, data) {
@@ -500,26 +516,103 @@ function createTable(data) {
             }
         }
     }
+    let keys = Object.keys(data[0]);
 
-    const table = document.createElement('table');
     generateTable(table, data);
-    generateTableHead(table, data);
-    main.appendChild(table);
+    generateTableHead(table, keys);
 }
 
-const activeGamesButton = document.createElement('button');
-activeGamesButton.onclick = function () {
-    postData('/activeGames', {msg: 'Request Active Games'}).then(data => {
-        debug(data);
-        if (data.msg) {
-            console.log(data.msg);
-        }
-        if (data.activeGames) {
-            const activeGamesArray = data.activeGames;
-            debug(activeGamesArray);
-            createTable(activeGamesArray);
-        }
-    });
+
+function activeGamesBlock() {
+    const activeGamesButton = document.createElement('button');
+    activeGamesButton.onclick = function () {
+        postData('/activeGames', {msg: 'Request Active Games'}).then(data => {
+            debug(data);
+            if (data.msg) {
+                console.log(data.msg);
+            }
+            if (data.activeGames) {
+                const activeGamesArray = data.activeGames;
+                debug(activeGamesArray);
+                createTable(gamesTable, activeGamesArray);
+            }
+        });
+    }
+    const activeGamesDiv = document.createElement('div');
+
+    activeGamesButton.innerText = 'Show (Update) Active Games';
+    const gamesTable = document.createElement('table');
+    activeGamesDiv.appendChild(activeGamesButton);
+    activeGamesDiv.appendChild(gamesTable);
+    main.appendChild(activeGamesDiv);
 }
-activeGamesButton.innerText = 'Show Active Games';
-main.appendChild(activeGamesButton);
+
+
+function clearElement(element) {
+    element.innerHTML = '';
+}
+
+
+let spectateReady = false;
+function spectateGameBlock() {
+    const codeInput = document.createElement("input"); //input element, text
+    codeInput.setAttribute('type', "text");
+    codeInput.setAttribute('name', "code");
+    codeInput.setAttribute('placeholder', "code");
+
+    const spectateDiv = document.createElement('div');
+    main.appendChild(spectateDiv);
+
+    spectateDiv.appendChild(codeInput);
+
+    const spectateButton = document.createElement('button');
+    spectateButton.onclick = () => {
+        const code = codeInput.value;
+        if (code) {
+            postData('/spectate', {code: code}).then(data => {
+                spectateDiv.appendChild(spectateStateHeader);
+                const canvas = document.createElement('canvas');
+                canvas.setAttribute('id', 'myCanvas');
+                canvas.width = xsize * TILE_SIZE;
+                canvas.height = ysize * TILE_SIZE;
+                spectateDiv.appendChild(canvas);
+                SPECTATE_CONTEXT = canvas.getContext("2d");
+                drawBorders(SPECTATE_CONTEXT);
+            }).then(() => {
+                spectateReady = true;
+                }
+            );
+        }
+    }
+    spectateButton.innerText = 'Spectate Game';
+    spectateDiv.appendChild(spectateButton);
+}
+spectateGameBlock();
+
+activeGamesBlock();
+
+
+function scoreBoardBlock() {
+    const showScoreBoardButton = document.createElement('button');
+    showScoreBoardButton.onclick = function () {
+        postData('/scoreBoard', {msg: 'Request Score Board'}).then(data => {
+            debug(data);
+            if (data.msg) {
+                console.log(data.msg);
+            }
+            if (data.scoreBoard) {
+                const activeGamesArray = data.scoreBoard;
+                debug(activeGamesArray);
+                createTable(scoreTable, activeGamesArray);
+            }
+        });
+    }
+    const scoreBoardDiv = document.createElement('div');
+
+    showScoreBoardButton.innerText = 'Show (Update) Score Board';
+    const scoreTable = document.createElement('table');
+    scoreBoardDiv.appendChild(showScoreBoardButton);
+    scoreBoardDiv.appendChild(scoreTable);
+    main.appendChild(scoreBoardDiv);
+}
+scoreBoardBlock();

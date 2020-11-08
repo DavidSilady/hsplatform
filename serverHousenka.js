@@ -65,7 +65,12 @@ class GameState {
         this.body_na_zacatku_levelu = 0;
         this.ridkost = false;
         this.housenkaIterator = 0;
-
+        this.nastav_smer = [
+            ["KeyD", "KeyL", "ArrowRight"],
+            ["KeyS", "KeyK", "ArrowDown"],
+            ["KeyA", "KeyJ", "ArrowLeft"],
+            ["KeyW", "KeyI", "ArrowUp"]
+        ]; // added new keys
         this.smery = new Array (1,0,0,1,-1,0,0,-1);
         this.idx_smeru = new Array (0,2,4,6);
     }
@@ -78,7 +83,7 @@ class ServerGame {
             this.user = user;
         } else {
             this.user = {
-                name: 'N/A',
+                username: 'N/A',
                 maxScore: 0,
                 maxLevel: 0
             }
@@ -100,7 +105,7 @@ class ServerGame {
     onKeyPress (keyDown) {
         //right down left up
         //nastav_smer = [[39, 76, 68], [40, 75, 83], [37, 74, 65], [38, 73, 87]]; // added new keys
-        this.gameState.nastav_smer = [["KeyD"], ["KeyS"], ["KeyA"], ["KeyW"]]; // added new keys
+
 
         if (this.gameState.startuj_hru) {
             this.rozpohybujHousenku();

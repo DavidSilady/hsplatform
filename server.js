@@ -23,6 +23,7 @@ const userIDtoGameCode = new Map();
 const userIDtoUser = new Map();
 const codeToActiveGame = new Map();
 const activeCodes = new Set();
+const spectateMap = new Map();
 
 //Helper functions
 function getCookie(cookies, name) {
@@ -61,9 +62,11 @@ function loadStorage() {
         })
         .pipe(csv())
         .on('data', (row) => {
-            userStorage.push(row);
-            usernameSet.add(row.username);
-            mailSet.add(row.mail);
+            if (row.username) {
+                userStorage.push(row);
+                usernameSet.add(row.username);
+                mailSet.add(row.mail);
+            }
         })
         .on('end', () => {
 
@@ -214,14 +217,41 @@ const gameUpdate = setInterval(function update() {
                 user.maxScore = currentScore;
                 serializeStorage();
             }
-            socket.send(JSON.stringify({
-                board: game.gameState.plocha,
-                currentLevel: currentLevel,
-                currentScore: currentScore,
-                maxLevel: user.maxLevel,
-                maxScore: user.maxScore,
-                lives: game.gameState.lives
-            }));
+            const spectateGame = codeToActiveGame.get(spectateMap.get(userID));
+
+            if (spectateGame) {
+                const spectateUser = spectateGame.user;
+                socket.send(JSON.stringify({
+                    main: {
+                        board: game.gameState.plocha,
+                        currentLevel: currentLevel,
+                        currentScore: currentScore,
+                        maxLevel: user.maxLevel,
+                        maxScore: user.maxScore,
+                        lives: game.gameState.lives
+                    },
+                    spectate: {
+                        board: spectateGame.gameState.plocha,
+                        currentLevel: spectateGame.gameState.level,
+                        currentScore: spectateGame.gameState.body,
+                        maxLevel: spectateUser.maxLevel,
+                        maxScore: spectateUser.maxScore,
+                        lives: spectateGame.gameState.lives
+                    }
+                }));
+            } else {
+                socket.send(JSON.stringify({
+                    main: {
+                        board: game.gameState.plocha,
+                        currentLevel: currentLevel,
+                        currentScore: currentScore,
+                        maxLevel: user.maxLevel,
+                        maxScore: user.maxScore,
+                        lives: game.gameState.lives
+                    }
+                }));
+            }
+
         }
     });
 }, 15);
@@ -280,13 +310,39 @@ function deserialize(string) {
     return instance;
 }
 
+app.post('/spectate', function (req, res) {
+   if (req.body.code) {
+        spectateMap.set(req.session.userID, req.body.code);
+        res.status(200).send(JSON.stringify({msg: `Spectating ${req.body.code}`}));
+   } else {
+       res.status(400).send(JSON.stringify({msg: 'Missing code.'}));
+   }
+});
+
+app.post('/scoreBoard', function (req, res) {
+    const allUsers = new Set(userStorage);
+    for (let [code, game] of codeToActiveGame) {
+        allUsers.add(game.user);
+    }
+    const allUserArray = Array.from(allUsers);
+    const scoreBoard = allUserArray.map(user => {
+        return {maxScore: user.maxScore, maxLevel: user.maxLevel, name: user.username};
+    });
+    scoreBoard.sort((a, b) => (a.maxScore > b.maxScore) ? - 1 : 1);
+    for (let i = 0; i < scoreBoard.length; i++) {
+        scoreBoard[i].rank = `#${i + 1}`;
+    }
+    res.status(200).send(JSON.stringify({msg: 'Requested Score Board', scoreBoard: scoreBoard}))
+});
+
 app.post('/activeGames', function (req, res) {
     debug(Array.from(activeCodes));
     const activeGames = Array.from(activeCodes);
-    const jsonActiveGames = activeGames.map(gameCode => {
-        return {"code": gameCode, "id": 1}
+    const mappedActiveGames = activeGames.map(gameCode => {
+        const game = codeToActiveGame.get(gameCode);
+        return {score: game.gameState.body, level: game.gameState.level, code: gameCode}
     });
-    res.status(200).send(JSON.stringify({msg: 'Requested Games.', activeGames: jsonActiveGames}));
+    res.status(200).send(JSON.stringify({msg: 'Requested Games.', activeGames: mappedActiveGames}));
 });
 
 app.post('/getState', function (req, res) {
@@ -304,10 +360,8 @@ app.post('/getState', function (req, res) {
 });
 
 app.post('/updateState', function (req, res, next) {
-    debug(req.body);
     if (req.body.gameState) {
         const gameStateString = req.body.gameState;
-        debug(gameStateString);
         const game = codeToActiveGame.get(userIDtoGameCode.get(req.session.userID));
         game.gameState = deserialize(gameStateString);
         res.status(200).send(JSON.stringify({msg: 'Game File Received.'}));
