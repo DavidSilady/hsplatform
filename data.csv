@@ -1,4 +1,3 @@
-mail,username,password
-abc@abc.abc,abc,U2FsdGVkX18gfiSUhpLo7CHzXDZc6RHbEA2+rXu5mok=
-abc@abc.abcs,abcs,U2FsdGVkX18/2seOIWhKa3nfP8zo0EWEvID5XXHH6D8=
-abc@abc.abcd,abcd,U2FsdGVkX18JwIn0KBQRClOUGCrPysHPiczLEVK+aqs=
+mail,username,password,maxScore,maxLevel
+,,,,
+abc@abc.bcd,abc,U2FsdGVkX18+FAB3YBI6/pgOi3nysRIkJE9IOJzi1ts=,0,0

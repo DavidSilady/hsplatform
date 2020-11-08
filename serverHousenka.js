@@ -2,7 +2,7 @@
 
 // Housenka (Nibbles Revival)
 // implementoval na Vanoce 2007 Milan Sorm
-// original implementation by Milan Sorm from https://is.stuba.sk/js/herna/housenka.js​​​​​​​
+// original implementation by Milan Sorm from https://is.stuba.sk/js/herna/housenka.js
 {
     var papejMsg = '';
     var startGameMsg = '';
@@ -73,8 +73,18 @@ class GameState {
 }
 
 class ServerGame {
-    constructor(id, gameState) {
-        this.userID = id;
+    constructor(id, gameState, user) {
+        this.user = {};
+        if (user) {
+            this.user = user;
+        } else {
+            this.user = {
+                name: 'N/A',
+                maxScore: 0,
+                maxLevel: 0
+            }
+        }
+
         if (gameState) {
             this.gameState = gameState;
         } else {
@@ -172,7 +182,8 @@ class ServerGame {
     show_uroven() {};
     show_zivoty() {};
     rozpohybujHousenku () {
-        if (this.gameState.timer) this.zastavHousenku();
+        if (this.gameState.timer)
+            this.zastavHousenku();
         const game = this;
 
         //binding to pass this (class object) to the function
@@ -265,7 +276,8 @@ class ServerGame {
             if (!narust) this.nastavBarvu(this.gameState.telicko.pop(),0);
             this.rozpohybujHousenku();
         } else
-        if (this.gameState.plocha[nova_pozice] === 1) this.koncime('worm');
+        if (this.gameState.plocha[nova_pozice] === 1)
+            this.koncime('worm');
         else this.koncime('wall');
     }
     vyresKlice (nesmi_byt) {
@@ -562,7 +574,8 @@ class ServerGame {
     }
 
     callFinish(body, reason) {
-        
+        this.gameState = new GameState();
+        this.novaHra();
     }
 }
 const DEBUG = true;

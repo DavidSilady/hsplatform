@@ -19,6 +19,7 @@ const MAX_USERS = 10000; //codes 0000 to 9999
 const socketToUserID = new Map();
 const userIDtoSocket = new Map();
 const userIDtoGameCode = new Map();
+const userIDtoUser = new Map();
 const activeGames = new Map();
 const activeCodes = new Set();
 
@@ -68,7 +69,7 @@ function loadStorage() {
             console.log('CSV file successfully processed');
         });
 }
-function writeStorage() {
+function serializeStorage() {
     const csvWriter = createCsvWriter({
         path: 'data.csv',
         header: [
@@ -96,7 +97,7 @@ function signUp(user) {
         userStorage.push(user);
         usernameSet.add(user.username);
         mailSet.add(user.mail);
-        writeStorage();
+        serializeStorage();
         outputMsg = 'User Signed Up';
     }
     return {msg: outputMsg, result: result};
@@ -114,10 +115,12 @@ function login(user) {
         debug(originalText);
         debug(user.password);
         if (originalText === user.password) {
-            return {result: true, msg: `User Logged In`};
+            return [storedUser, {result: true, msg: `User ${storedUser.username} Logged In`}];
         } else {
-            return {result: false, msg: `Incorrect username or password`};
+            return [NaN, {result: false, msg: `Incorrect password`}];
         }
+    } else {
+        return [NaN, {result: false, msg: `Incorrect username`}];
     }
 }
 function getUserByMail(mail) {
@@ -163,9 +166,10 @@ wss.on('connection', function connection(socket, req) {
     const userID = getCookie(req.headers.cookie, 'uid');
     socketToUserID.set(socket, userID); //for 2-way search
     userIDtoSocket.set(userID, socket);
-    if (! activeGames.has(userID)) {
-        const game = new sh.ServerGame(userID);
-        activeGames.set(userID, game);
+    const gameCode = userIDtoGameCode.get(userID)
+    if (! activeGames.has(gameCode)) {
+        const game = new sh.ServerGame(userIDtoUser.get(userID));
+        activeGames.set(gameCode, game);
     }
     socket.isAlive = true;
     socket.on('pong', heartbeat); // updating isAlive for keepAlive
@@ -192,9 +196,29 @@ wss.on('connection', function connection(socket, req) {
 const gameUpdate = setInterval(function update() {
     wss.clients.forEach(socket => {
         const userID = socketToUserID.get(socket);
-        const game = activeGames.get(userID)
+        let user = userIDtoUser.get(userID);
+
+        const game = activeGames.get(userIDtoGameCode.get(userID));
         if (game) {
-            socket.send(JSON.stringify({board: game.gameState.plocha}));
+            if (! user) { //if not registered, use the games base user
+                user = game.user;
+            }
+            const currentLevel = game.gameState.level;
+            const currentScore = game.gameState.body;
+            if (currentLevel > user.maxLevel) {
+                user.maxLevel = currentLevel;
+            }
+            if (currentScore > user.maxScore) {
+                user.maxScore = currentScore;
+            }
+            socket.send(JSON.stringify({
+                board: game.gameState.plocha,
+                currentLevel: currentLevel,
+                currentScore: currentScore,
+                maxLevel: user.maxLevel,
+                maxScore: user.maxScore,
+                lives: game.gameState.lives
+            }));
         }
     });
 }, 15);
@@ -254,6 +278,9 @@ app.post('/signUp', function (req, res) {
         }
         debug(user);
         const output = signUp(user);
+        if (output.result) {
+            userIDtoUser.set(req.session.userID, user);
+        }
         res.status(200).send(JSON.stringify(output));
     } else {
         res.status(400).send(JSON.stringify({msg: 'Something went wrong.', result: false}));
@@ -265,16 +292,19 @@ app.post('/login', function (req, res) {
            username: req.body.username,
            password: req.body.password
        }
-       const output = login(user);
+       const [loggedInUser, output] = login(user);
+       if (output.result && loggedInUser) {
+            userIDtoUser.set(req.session.userID, loggedInUser);
+       }
        res.status(200).send(JSON.stringify(output));
    } else {
        res.status(400).send(JSON.stringify({msg: 'Something went wrong.', result: false}));
    }
 });
 app.post('/gameInput', function (req, res) {
-    const userID = req.session.userID;
-    if (userID && req.body.keyDown) {
-        const game = activeGames.get(userID);
+    const gameCode = req.session.gameCode;
+    if (gameCode && req.body.keyDown) {
+        const game = activeGames.get(gameCode);
         if (game) {
             game.onKeyPress(req.body.keyDown);
         }

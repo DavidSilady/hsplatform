@@ -32,16 +32,20 @@ const userSignUp = async () => {
 const userLogin = async () => {
     const username = loginUsername.value;
     const password = loginPassword.value;
-    postData('/login', {username: username, password: password}).then(data => {
-        debug(data);
-        if (data.msg) {
-            loginResult.innerText = data.msg;
-        }
-        if (data.result) {
-            loggedIn = true;
-            debug('Logged In');
-        }
-    })
+    if (username && password) {
+        postData('/login', {username: username, password: password}).then(data => {
+            debug(data);
+            if (data.msg) {
+                loginResult.innerText = data.msg;
+            }
+            if (data.result) {
+                loggedIn = true;
+                debug('Logged In');
+            }
+        });
+    } else {
+        loginResult.innerText = 'Username and Password required';
+    }
 }
 
 const main = document.getElementById('worm');
@@ -83,7 +87,6 @@ const main = document.getElementById('worm');
     loginResult.innerText = '';
 
 
-
 // const submit = document.createElement("input"); //input element, Submit button
 // submit.setAttribute('type',"submit");
 // submit.setAttribute('value',"Log In");
@@ -112,6 +115,8 @@ const main = document.getElementById('worm');
     main.appendChild(signUpDiv);
     main.appendChild(loginDiv);
 
+    const gameStateHeader = document.createElement('h4');
+    main.appendChild(gameStateHeader);
 
 async function init() {
     await postData('/init', {}).then(data => {
@@ -133,6 +138,11 @@ async function init() {
         const jsonData = JSON.parse(event.data);
         if (jsonData.board && canvasReady) {
             updateBoard(jsonData.board);
+            gameStateHeader.innerText = `| Max Score: ${jsonData.maxScore} | `
+            gameStateHeader.innerText += ` Current Score: ${jsonData.currentScore} | `
+            gameStateHeader.innerText += ` Max Level: ${jsonData.maxLevel} | `
+            gameStateHeader.innerText += ` Current Level: ${jsonData.currentLevel} | `
+            gameStateHeader.innerText += ` Lives: ${jsonData.lives} | `
         } else if (jsonData.msg) {
             console.log(jsonData.msg);
         } else {
@@ -182,7 +192,7 @@ async function postData(url = '', data = {}) {
 
 
 
-main.onkeydown = postKey;
+document.onkeydown = postKey;
 function postKey(e) {
     if (keyInputEnabled) {
         postData('/gameInput', {keyDown: e.code}).then(res => {
