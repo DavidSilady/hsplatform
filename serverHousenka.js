@@ -48,11 +48,13 @@ class GameState {
 
         this.level = 1;
         this.bodu_za_zradlo = this.bodu_za_zradlo_orig;
-        this.plocha = [];
+        this.plocha = Array(this.xsize * this.ysize).fill(0);
         this.povolena_zmena_smeru = 1;
         this.body = 0;
+        this.obsahy = new Array ('prazdne','telicko','zradlo','zed','klic','dvere','hlavicka');
         this.zradla_k_dispozici = 0;
         this.telicko = new Array();
+        this.klavesy = new Array();
         this.smer = 0;		// 0 vpravo, pak po smeru
         this.hlaska = "";
         this.klicu = 0;
@@ -62,6 +64,7 @@ class GameState {
         this.startuj_hru = 1;
         this.body_na_zacatku_levelu = 0;
         this.ridkost = false;
+        this.housenkaIterator = 0;
 
         this.smery = new Array (1,0,0,1,-1,0,0,-1);
         this.idx_smeru = new Array (0,2,4,6);
@@ -80,14 +83,13 @@ class ServerGame {
                 maxLevel: 0
             }
         }
-
+        this.timer = {};
         if (gameState) {
             this.gameState = gameState;
         } else {
             this.gameState = new GameState();
-            this.gameState.plocha = new Array(this.gameState.xsize * this.gameState.ysize).fill(0);
         }
-        this.timer = {};
+
         this.novaHra();
     }
     zastavHru (reason) {
@@ -582,3 +584,6 @@ function debug(output) {
 
 exports.ServerGame = ServerGame;
 exports.GameState = GameState;
+
+
+

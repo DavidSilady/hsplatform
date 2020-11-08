@@ -51,6 +51,7 @@ const userLogin = async () => {
 
 const main = document.getElementById('worm');
 const assignedGameCode = document.createElement('h3');
+
 //Login / Sign Up
 
     const signUpDiv = document.createElement('div');
@@ -126,7 +127,7 @@ async function init() {
         document.cookie = `uid=${data.userID}`;
         document.cookie = `gameCode=${data.gameCode}`;
         assignedGameCode.innerText = `Assigned game code: ${data.gameCode}`;
-        main.appendChild(assignedGameCode);
+
     });
 
     const socket = await new WebSocket('ws://localhost:8082');
@@ -348,6 +349,7 @@ function canvasInput (coordinates, color) {
 }
 
 // I N T E R F A C E
+main.appendChild(assignedGameCode);
 let loggedIn = false;
 let keyInputEnabled = false;
 const startButton = document.createElement('button');
