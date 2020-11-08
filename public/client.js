@@ -616,3 +616,48 @@ function scoreBoardBlock() {
     main.appendChild(scoreBoardDiv);
 }
 scoreBoardBlock();
+
+function audioPlayer(url) {
+    const audio = new Audio(url);
+    audio.muted = false;
+    audio.loop = true;
+    const authorButton = document.createElement('button');
+    authorButton.innerText = 'Author';
+    authorButton.onclick = () => {
+        window.open('https://materia.to/undertaleID');
+    }
+    const audioButton = document.createElement('button');
+    audioButton.innerText = ' [ Play / Pause ] Audio ';
+    let playing = false;
+    audioButton.onclick = () => {
+        playing = !playing;
+        if (playing) {
+            audio.play().then(() => {debug('Audio playing.')});
+        } else {
+            audio.pause();
+        }
+
+    }
+    const audioDiv = document.createElement('div');
+    audioDiv.appendChild(audioButton);
+    audioDiv.appendChild(authorButton);
+    main.appendChild(audioDiv);
+}
+
+//https://archive.org/details/TobyFoxMegalovania
+// MEGALOVANIA
+// Performed by
+//
+// Toby Fox
+// Written by
+//
+// Toby Fox
+// Produced by
+//
+// -
+// Source: Materia Collective
+//https://materiamusicpub.com/
+//https://materia.to/undertaleID
+//Soundtrack to indie RPG Undertale
+//
+audioPlayer("https://archive.org/download/TobyFoxMegalovania/Toby%20Fox%20-%20Megalovania.mp3");
