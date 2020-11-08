@@ -302,7 +302,10 @@ app.post('/login', function (req, res) {
    }
 });
 app.post('/gameInput', function (req, res) {
-    const gameCode = req.session.gameCode;
+    let gameCode = req.session.gameCode;
+    if (req.body.altGame) {
+        gameCode = req.body.altGame;
+    }
     if (gameCode && req.body.keyDown) {
         const game = activeGames.get(gameCode);
         if (game) {

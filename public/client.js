@@ -24,6 +24,7 @@ const userSignUp = async () => {
         }
         if (data.result) {
             loggedIn = true;
+            loginResult.innerText = 'Logged In.';
             debug('Logged In');
         }
     })
@@ -49,6 +50,7 @@ const userLogin = async () => {
 }
 
 const main = document.getElementById('worm');
+const assignedGameCode = document.createElement('h3');
 //Login / Sign Up
 
     const signUpDiv = document.createElement('div');
@@ -123,9 +125,8 @@ async function init() {
         console.log(data);
         document.cookie = `uid=${data.userID}`;
         document.cookie = `gameCode=${data.gameCode}`;
-        const userCodeElement = document.createElement('h3');
-        userCodeElement.innerText = data.gameCode;
-        main.appendChild(userCodeElement);
+        assignedGameCode.innerText = `Assigned game code: ${data.gameCode}`;
+        main.appendChild(assignedGameCode);
     });
 
     const socket = await new WebSocket('ws://localhost:8082');
@@ -354,8 +355,59 @@ startButton.onclick = () => {
     keyInputEnabled = !keyInputEnabled;
     debug(`Game Key Input Enabled: ${keyInputEnabled}`);
 }
-startButton.innerText = '(Start | Stop) Key Input';
+startButton.innerText = '(Start | Stop) Keyboard Input';
 main.appendChild(startButton);
 
 
 
+const remoteControl = function () {
+    const codeControlTextField = document.createElement("input"); //input element, text
+    codeControlTextField.setAttribute('type',"text");
+    codeControlTextField.setAttribute('name',"code");
+    codeControlTextField.setAttribute('placeholder',"code");
+    codeControlTextField.value = assignedGameCode.innerText;
+    const controlButtonsDiv = document.createElement('div');
+    main.appendChild(controlButtonsDiv);
+
+    controlButtonsDiv.appendChild(codeControlTextField);
+
+    const rightButton = document.createElement('button');
+    rightButton.onclick = () => {
+        remoteGameInput('KeyD');
+    }
+    rightButton.innerText = ' > ';
+
+    const upButton = document.createElement('button');
+    upButton.onclick = () => {
+        remoteGameInput('KeyW');
+    }
+    upButton.innerText = ' ^ ';
+
+    const downButton = document.createElement('button');
+    downButton.onclick = () => {
+        remoteGameInput('KeyS');
+    }
+    downButton.innerText = ' v ';
+
+    const leftButton = document.createElement('button');
+    leftButton.onclick = () => {
+        remoteGameInput('KeyA');
+    }
+    leftButton.innerText = ' < ';
+
+    controlButtonsDiv.append(leftButton, upButton, downButton, rightButton);
+
+    function remoteGameInput(keyCode) {
+        const gameCode = codeControlTextField.value;
+        if (gameCode) {
+            postData('/gameInput', {keyDown: keyCode, altGame: gameCode}).then(res => {
+                debug(res)
+            });
+        } else {
+            postData('/gameInput', {keyDown: keyCode}).then(res => {
+                debug(res)
+            });
+        }
+    }
+}
+remoteControl();
