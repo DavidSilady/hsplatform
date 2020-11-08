@@ -167,6 +167,7 @@ async function init() {
 
 const socket = init();
 
+const DEBUG = false;
 function debug(output) {
     if (DEBUG) console.log(output);
 }
@@ -219,7 +220,7 @@ const xsize = 41;
 const ysize = 31;
 
 const TILE_SIZE = 16;
-const DEBUG = true;
+
 let canvasReady = false;
 
 localStorage.setItem("DEBUG", "true");

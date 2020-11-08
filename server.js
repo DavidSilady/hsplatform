@@ -7,13 +7,11 @@ const CryptoJS = require('crypto-js');
 const csv = require('csv-parser');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const fs = require('fs');
-const FileReader = require('filereader');
 
 //Const values
 const WS_PORT = 8082;
 const HTTP_PORT = 8080;
 const COOKIE_AGE = 1000 * 60 * 60 * 24; // 1 day
-const DEBUG = true;
 const MAX_USERS = 10000; //codes 0000 to 9999
 
 //Global variables
@@ -443,6 +441,7 @@ function errorHandler(err, req, res, next) {
     }
 }
 
+const DEBUG = false;
 function debug(output) {
     if (DEBUG) {
         console.log(output);
