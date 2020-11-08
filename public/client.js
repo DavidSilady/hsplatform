@@ -83,10 +83,10 @@ const assignedGameCode = document.createElement('h3');
     signUpMail.setAttribute('placeholder',"mail");
 
     const signUpResult = document.createElement('p');
-    signUpResult.innerText = '';
+    signUpResult.innerText = 'Game will be reset upon sign up.';
 
     const loginResult = document.createElement('p');
-    loginResult.innerText = '';
+    loginResult.innerText = 'Game will be reset upon login.';
 
 
 // const submit = document.createElement("input"); //input element, Submit button
@@ -355,7 +355,7 @@ startButton.onclick = () => {
     keyInputEnabled = !keyInputEnabled;
     debug(`Game Key Input Enabled: ${keyInputEnabled}`);
 }
-startButton.innerText = '(Start | Stop) Keyboard Input';
+startButton.innerText = '(Enable | Disable) Keyboard Input';
 main.appendChild(startButton);
 
 
@@ -395,7 +395,13 @@ const remoteControl = function () {
     }
     leftButton.innerText = ' < ';
 
-    controlButtonsDiv.append(leftButton, upButton, downButton, rightButton);
+    const stopButton = document.createElement('button');
+    stopButton.onclick = () => {
+        remoteGameInput('KeyP');
+    }
+    stopButton.innerText = ' S T O P ';
+
+    controlButtonsDiv.append(leftButton, upButton, downButton, rightButton, stopButton);
 
     function remoteGameInput(keyCode) {
         const gameCode = codeControlTextField.value;
@@ -411,3 +417,59 @@ const remoteControl = function () {
     }
 }
 remoteControl();
+
+
+function fileInput() {
+    const fileInputDiv = document.createElement('div');
+    main.appendChild(fileInputDiv);
+    const downloadStateButton = document.createElement('button');
+    downloadStateButton.onclick = () => {
+        //could be GET
+        debug('Get state');
+        postData('/getState', {msg: 'Serialize State'}).then(data => {
+            debug(data);
+            if (data.file) {
+                const gameState = data.file;
+                debug(gameState);
+                download(gameState, 'game.txt', 'text');
+            }
+        });
+    }
+    downloadStateButton.innerText = 'Download Game State';
+
+    const inputElement = document.createElement('input');
+    inputElement.setAttribute('type', 'file');
+    inputElement.addEventListener("change", handleFiles, false);
+    async function handleFiles() {
+        const file = this.files[0];
+        debug(file);
+        const reader = new FileReader();
+        await reader.readAsText(file);
+        reader.onloadend = () => postData('/updateState', {gameState: reader.result}).then(data => {debug(data)});
+    }
+
+    fileInputDiv.appendChild(downloadStateButton);
+    fileInputDiv.appendChild(inputElement);
+}
+
+fileInput();
+
+// Function to download data to a file
+function download(data, filename, type) {
+    //https://stackoverflow.com/a/30832210
+    const file = new Blob([data], {type: type});
+    if (window.navigator.msSaveOrOpenBlob) // IE10+
+        window.navigator.msSaveOrOpenBlob(file, filename);
+    else { // Others
+        const a = document.createElement("a"),
+            url = URL.createObjectURL(file);
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function() {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }, 0);
+    }
+}

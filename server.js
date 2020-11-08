@@ -2,11 +2,12 @@
 const express = require('express');
 const session = require('express-session');
 const uuid = require('uuid');
-const sh = require('./serverHousenka');
+const serverGame = require('./serverHousenka');
 const CryptoJS = require('crypto-js');
 const csv = require('csv-parser');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const fs = require('fs');
+const FileReader = require('filereader');
 
 //Const values
 const WS_PORT = 8082;
@@ -20,7 +21,7 @@ const socketToUserID = new Map();
 const userIDtoSocket = new Map();
 const userIDtoGameCode = new Map();
 const userIDtoUser = new Map();
-const activeGames = new Map();
+const codeToActiveGame = new Map();
 const activeCodes = new Set();
 
 //Helper functions
@@ -167,9 +168,9 @@ wss.on('connection', function connection(socket, req) {
     socketToUserID.set(socket, userID); //for 2-way search
     userIDtoSocket.set(userID, socket);
     const gameCode = userIDtoGameCode.get(userID)
-    if (! activeGames.has(gameCode)) {
-        const game = new sh.ServerGame(userIDtoUser.get(userID));
-        activeGames.set(gameCode, game);
+    if (! codeToActiveGame.has(gameCode)) {
+        const game = new serverGame.ServerGame(userIDtoUser.get(userID));
+        codeToActiveGame.set(gameCode, game);
     }
     socket.isAlive = true;
     socket.on('pong', heartbeat); // updating isAlive for keepAlive
@@ -185,7 +186,7 @@ wss.on('connection', function connection(socket, req) {
         const code = socketToUserID.get(socket)
         debug(`Socket closed: ${socketToUserID.get(socket)}`);
         activeCodes.delete(code);
-        activeGames.delete(code);
+        codeToActiveGame.delete(code);
         userIDtoSocket.delete(code);
         socketToUserID.delete(socket);
     });
@@ -198,7 +199,7 @@ const gameUpdate = setInterval(function update() {
         const userID = socketToUserID.get(socket);
         let user = userIDtoUser.get(userID);
 
-        const game = activeGames.get(userIDtoGameCode.get(userID));
+        const game = codeToActiveGame.get(userIDtoGameCode.get(userID));
         if (game) {
             if (! user) { //if not registered, use the games base user
                 user = game.user;
@@ -207,9 +208,11 @@ const gameUpdate = setInterval(function update() {
             const currentScore = game.gameState.body;
             if (currentLevel > user.maxLevel) {
                 user.maxLevel = currentLevel;
+                serializeStorage();
             }
             if (currentScore > user.maxScore) {
                 user.maxScore = currentScore;
+                serializeStorage();
             }
             socket.send(JSON.stringify({
                 board: game.gameState.plocha,
@@ -266,7 +269,49 @@ app.post('/init', function (req, res) {
     }));
 });
 
+function serialize(instance) {
+    return JSON.stringify(instance);
+}
+
+function deserialize(string) {
+    const instance = new serverGame.GameState();
+    const serializedObject = JSON.parse(string);
+    Object.assign(instance, serializedObject);
+    return instance;
+}
+
+app.post('/getState', function (req, res) {
+    if (req.session.userID) {
+        const game = codeToActiveGame.get(userIDtoGameCode.get(req.session.userID));
+        if (game) {
+            const gameState = serialize(game.gameState);
+            res.status(200).send(JSON.stringify({msg: 'Game State Serialized', file: gameState}))
+        } else {
+            res.status(400).send(JSON.stringify({msg: 'Something went wrong.'}));
+        }
+    } else {
+        res.status(400).send(JSON.stringify({msg: 'Something went wrong.'}));
+    }
+});
+
+app.post('/updateState', function (req, res, next) {
+    debug(req.body);
+    if (req.body.gameState) {
+        const gameStateString = req.body.gameState;
+        debug(gameStateString);
+        const game = codeToActiveGame.get(userIDtoGameCode.get(req.session.userID));
+        game.gameState = deserialize(gameStateString);
+        res.status(200).send(JSON.stringify({msg: 'Game File Received.'}));
+    } else {
+        res.status(400).send(JSON.stringify({msg: 'File not found'}));
+    }
+});
+
 app.post('/signUp', function (req, res) {
+    const game = codeToActiveGame.get(req.session.gameCode);
+    if (game) {
+        game.zastavHru('login');
+    }
     if (req.body.password && req.body.username && req.body.mail) {
         const cipherPassword = CryptoJS.AES.encrypt(req.body.password, '13bc672d8b40').toString();
         const user = {
@@ -287,6 +332,10 @@ app.post('/signUp', function (req, res) {
     }
 });
 app.post('/login', function (req, res) {
+    const game = codeToActiveGame.get(req.session.gameCode);
+    if (game) {
+        game.zastavHru('login');
+    }
    if (req.body.password && req.body.username) {
        const user = {
            username: req.body.username,
@@ -307,11 +356,11 @@ app.post('/gameInput', function (req, res) {
         gameCode = req.body.altGame;
     }
     if (gameCode && req.body.keyDown) {
-        const game = activeGames.get(gameCode);
+        const game = codeToActiveGame.get(gameCode);
         if (game) {
             game.onKeyPress(req.body.keyDown);
         }
-        res.status(200).send(JSON.stringify({msg: `Key: ${req.body.keyDown} received.`}))
+        res.status(200).send(JSON.stringify({msg: `Key: ${req.body.keyDown} received for game ${gameCode}.`}))
     } else {
         res.status(200).send(JSON.stringify({msg: 'Unknown user or missing key.'}));
     }

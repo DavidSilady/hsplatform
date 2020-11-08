@@ -48,15 +48,12 @@ class GameState {
 
         this.level = 1;
         this.bodu_za_zradlo = this.bodu_za_zradlo_orig;
-        this.plocha = Array(this.xsize * this.ysize).fill(0);
+        this.plocha = [];
         this.povolena_zmena_smeru = 1;
         this.body = 0;
-        this.obsahy = new Array ('prazdne','telicko','zradlo','zed','klic','dvere','hlavicka');
         this.zradla_k_dispozici = 0;
         this.telicko = new Array();
-        this.klavesy = new Array();
         this.smer = 0;		// 0 vpravo, pak po smeru
-        this.timer = {};
         this.hlaska = "";
         this.klicu = 0;
         this.ulozeno_na_klice = 0;
@@ -65,7 +62,6 @@ class GameState {
         this.startuj_hru = 1;
         this.body_na_zacatku_levelu = 0;
         this.ridkost = false;
-        this.housenkaIterator = 0;
 
         this.smery = new Array (1,0,0,1,-1,0,0,-1);
         this.idx_smeru = new Array (0,2,4,6);
@@ -89,8 +85,9 @@ class ServerGame {
             this.gameState = gameState;
         } else {
             this.gameState = new GameState();
+            this.gameState.plocha = new Array(this.gameState.xsize * this.gameState.ysize).fill(0);
         }
-
+        this.timer = {};
         this.novaHra();
     }
     zastavHru (reason) {
@@ -182,12 +179,12 @@ class ServerGame {
     show_uroven() {};
     show_zivoty() {};
     rozpohybujHousenku () {
-        if (this.gameState.timer)
+        if (this.timer)
             this.zastavHousenku();
         const game = this;
 
         //binding to pass this (class object) to the function
-        this.gameState.timer = setTimeout(this.movement.bind(this), this.gameState.rychlost);
+        this.timer = setTimeout(this.movement.bind(this), this.gameState.rychlost);
     }
     volnePole (nesmi_byt) {
         const xsize = this.gameState.xsize;
@@ -307,9 +304,9 @@ class ServerGame {
         this.show_result(doorMsg);
     }
     zastavHousenku () {
-        if (this.gameState.timer) {
-            clearTimeout(this.gameState.timer);
-            this.gameState.timer = undefined;
+        if (this.timer) {
+            clearTimeout(this.timer);
+            this.timer = undefined;
         }
     }
     narustHousenky (pozice,hlavicka) {
@@ -584,3 +581,4 @@ function debug(output) {
 }
 
 exports.ServerGame = ServerGame;
+exports.GameState = GameState;
