@@ -622,7 +622,7 @@ function audioPlayer(url) {
     audio.muted = false;
     audio.loop = true;
     const authorButton = document.createElement('button');
-    authorButton.innerText = 'Author';
+    authorButton.innerText = 'Author (Toby Fox - Megalovania)';
     authorButton.onclick = () => {
         window.open('https://materia.to/undertaleID');
     }
