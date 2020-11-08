@@ -116,9 +116,10 @@ const main = document.getElementById('worm');
 async function init() {
     await postData('/init', {}).then(data => {
         console.log(data);
-        document.cookie = `uid=${data.userCode}`;
+        document.cookie = `uid=${data.userID}`;
+        document.cookie = `gameCode=${data.gameCode}`;
         const userCodeElement = document.createElement('h3');
-        userCodeElement.innerText = data.userCode;
+        userCodeElement.innerText = data.gameCode;
         main.appendChild(userCodeElement);
     });
 

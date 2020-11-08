@@ -16,8 +16,9 @@ const DEBUG = true;
 const MAX_USERS = 10000; //codes 0000 to 9999
 
 //Global variables
-const socketToUserCode = new Map();
-const userCodeToSocket = new Map();
+const socketToUserID = new Map();
+const userIDtoSocket = new Map();
+const userIDtoGameCode = new Map();
 const activeGames = new Map();
 const activeCodes = new Set();
 
@@ -73,7 +74,9 @@ function writeStorage() {
         header: [
             {id: 'mail', title: 'mail'},
             {id: 'username', title: 'username'},
-            {id: 'password', title: 'password'}
+            {id: 'password', title: 'password'},
+            {id: 'maxScore', title: 'maxScore'},
+            {id: 'maxLevel', title: 'maxLevel'}
         ]
     });
     csvWriter.writeRecords(userStorage).then(() => debug('CSV file updated.'));
@@ -158,8 +161,8 @@ wss.on('connection', function connection(socket, req) {
     console.log('A new client connected.');
     debug(getCookie(req.headers.cookie, 'uid'));
     const userID = getCookie(req.headers.cookie, 'uid');
-    socketToUserCode.set(socket, userID); //for 2-way search
-    userCodeToSocket.set(userID, socket);
+    socketToUserID.set(socket, userID); //for 2-way search
+    userIDtoSocket.set(userID, socket);
     if (! activeGames.has(userID)) {
         const game = new sh.ServerGame(userID);
         activeGames.set(userID, game);
@@ -175,12 +178,12 @@ wss.on('connection', function connection(socket, req) {
     });
 
     socket.on('close', function () {
-        const code = socketToUserCode.get(socket)
-        debug(`Socket closed: ${socketToUserCode.get(socket)}`);
+        const code = socketToUserID.get(socket)
+        debug(`Socket closed: ${socketToUserID.get(socket)}`);
         activeCodes.delete(code);
         activeGames.delete(code);
-        userCodeToSocket.delete(code);
-        socketToUserCode.delete(socket);
+        userIDtoSocket.delete(code);
+        socketToUserID.delete(socket);
     });
 });
 
@@ -188,7 +191,7 @@ wss.on('connection', function connection(socket, req) {
 //interval for game updates
 const gameUpdate = setInterval(function update() {
     wss.clients.forEach(socket => {
-        const userID = socketToUserCode.get(socket);
+        const userID = socketToUserID.get(socket);
         const game = activeGames.get(userID)
         if (game) {
             socket.send(JSON.stringify({board: game.gameState.plocha}));
@@ -210,7 +213,7 @@ const keepAlive = setInterval(function ping() {
 wss.on('close', function close() {
     clearInterval(gameUpdate);
     clearInterval(keepAlive);
-})
+});
 
 //Express setup
 app.use(sessionParser);
@@ -225,21 +228,29 @@ app.post('/init', function (req, res) {
     // "Log in" user and set private userId and public userCode to session.
     //
     if (! req.session.userID) {
-        req.session.userID = uuid.v4(); //private
+        req.session.userID = uuid.v4();
         // will keep original code if its still free
-        req.session.userCode = generateUserCode(req.session.userCode); //public in cookie and on site / 0000 - 9999
+        req.session.gameCode = generateUserCode(req.session.gameCode); //public game in cookie and on site / 0000 - 9999
     }
-
+    userIDtoGameCode.set(req.session.userID, req.session.gameCode);
+    debug(req.session);
     console.log(`Updating session for user ${req.session.userID}`);
-    res.send(JSON.stringify({ result: 'OK', message: 'Session updated', userCode: req.session.userCode, userID: req.session.userID}));
+    res.send(JSON.stringify({ result: 'OK',
+        message: 'Session updated',
+        gameCode: req.session.gameCode,
+        userID: req.session.userID
+    }));
 });
+
 app.post('/signUp', function (req, res) {
     if (req.body.password && req.body.username && req.body.mail) {
         const cipherPassword = CryptoJS.AES.encrypt(req.body.password, '13bc672d8b40').toString();
         const user = {
             username: req.body.username,
             mail: req.body.mail,
-            password: cipherPassword
+            password: cipherPassword,
+            maxScore: 0,
+            maxLevel: 0
         }
         debug(user);
         const output = signUp(user);
@@ -261,9 +272,9 @@ app.post('/login', function (req, res) {
    }
 });
 app.post('/gameInput', function (req, res) {
-    const userCode = req.session.userCode
-    if (userCode && req.body.keyDown) {
-        const game = activeGames.get(userCode);
+    const userID = req.session.userID;
+    if (userID && req.body.keyDown) {
+        const game = activeGames.get(userID);
         if (game) {
             game.onKeyPress(req.body.keyDown);
         }
