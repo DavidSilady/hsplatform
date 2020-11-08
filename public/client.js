@@ -622,9 +622,9 @@ function audioPlayer(url) {
     audio.muted = false;
     audio.loop = true;
     const authorButton = document.createElement('button');
-    authorButton.innerText = 'Author (Toby Fox - Megalovania)';
+    authorButton.innerText = 'Roll';
     authorButton.onclick = () => {
-        window.open('https://materia.to/undertaleID');
+        window.open('https://bit.ly/2GFGsjQ');
     }
     const audioButton = document.createElement('button');
     audioButton.innerText = ' [ Play / Pause ] Audio ';
@@ -647,17 +647,21 @@ function audioPlayer(url) {
 //https://archive.org/details/TobyFoxMegalovania
 // MEGALOVANIA
 // Performed by
-//
 // Toby Fox
 // Written by
-//
 // Toby Fox
-// Produced by
-//
-// -
+//Publisher's song ID: MCMP-001-100
 // Source: Materia Collective
 //https://materiamusicpub.com/
 //https://materia.to/undertaleID
 //Soundtrack to indie RPG Undertale
 //
-audioPlayer("https://archive.org/download/TobyFoxMegalovania/Toby%20Fox%20-%20Megalovania.mp3");
+//audioPlayer("https://archive.org/download/TobyFoxMegalovania/Toby%20Fox%20-%20Megalovania.mp3");
+
+
+//License: Public Domain
+//https://creativecommons.org/licenses/publicdomain/
+//Source: https://archive.org/details/ER37leftbehind/02.WagonRide.flac
+//Author Adhesion & Scrap Heap
+//Year 2006
+audioPlayer("https://ia802703.us.archive.org/28/items/ER37leftbehind/02.WagonRide_64kb.mp3");
